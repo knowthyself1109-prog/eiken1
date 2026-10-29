@@ -513,6 +513,11 @@ h3 { font-size: 17px; color: #1a3a5c; margin: 0 0 14px; }
 /* タブは3つ */
 .tabs-3 { grid-template-columns: repeat(3, 1fr); }
 .tabs-4 { grid-template-columns: repeat(4, 1fr); }
+.tabs-5 { grid-template-columns: repeat(5, 1fr); gap: 5px; }
+.tabs-5 .tab { padding: 13px 2px; font-size: 13.5px; }
+.link-as-btn { display: block; box-sizing: border-box; text-align: center; text-decoration: none; margin-bottom: 14px; }
+.link-as-btn:hover { color: #fff; }
+.essay-note ol, .essay-note ul { margin: 6px 0 14px; padding-left: 22px; font-size: 14.5px; line-height: 1.7; }
 
 /* ---------------- 今日のノルマの帯 ---------------- */
 .today-strip {
@@ -663,11 +668,12 @@ h3 { font-size: 17px; color: #1a3a5c; margin: 0 0 14px; }
 
     <div id="today-strip" class="today-strip"></div>
 
-    <nav class="tabs tabs-4" role="tablist">
+    <nav class="tabs tabs-5" role="tablist">
       <button class="tab is-active" data-tab="start"  role="tab">出題</button>
       <button class="tab"           data-tab="word"   role="tab">単語</button>
+      <button class="tab"           data-tab="essay"  role="tab">英作文</button>
       <button class="tab"           data-tab="weak"   role="tab">苦手</button>
-      <button class="tab"           data-tab="record" role="tab">学習記録</button>
+      <button class="tab"           data-tab="record" role="tab">記録</button>
     </nav>
 
     <div id="tab-start" class="tab-panel">
@@ -686,6 +692,31 @@ h3 { font-size: 17px; color: #1a3a5c; margin: 0 0 14px; }
         間違えた単語も「苦手」にたまります。解いた数は今日のノルマに入ります。
       </p>
       <div id="list-word" class="menu-list"></div>
+    </div>
+
+    <div id="tab-essay" class="tab-panel hidden">
+      <p class="lead">
+        英検ライティング（準2級・2級）の答案を、Googleフォームで提出します。<br>
+        提出すると、<strong>先生から添削が返却されます</strong>。
+      </p>
+      <a class="primary-btn wide link-as-btn" href="https://docs.google.com/forms/d/e/1FAIpQLSdyzPFvAFyFtXk0LZYjRbfRUhw95vO4QbGjdyCtVtQptqzDdQ/viewform"
+         target="_blank" rel="noopener noreferrer">✍ 英作文の提出フォームを開く</a>
+      <div class="card essay-note">
+        <h3 class="rec-h">送り方</h3>
+        <ol>
+          <li>どの級のどの問題かを選ぶ</li>
+          <li>Eメール問題・英文要約は、<strong>問題のページを写真に撮って添付</strong>する<br>
+            （意見論述は QUESTION / TOPIC を文字で打ち込んでもOK）</li>
+          <li>自分の答案を英語で打ち込む</li>
+        </ol>
+        <h3 class="rec-h">語数の目安</h3>
+        <ul>
+          <li>準2級　Eメール 40〜50語／英作文 50〜60語</li>
+          <li>2級　英文要約 45〜55語／英作文 80〜100語</li>
+        </ul>
+        <p class="hint">写真を添付するため、<strong>学校のGoogleアカウントでログイン</strong>が必要です。
+          フォームは新しいタブで開きます。</p>
+      </div>
     </div>
 
     <div id="tab-weak" class="tab-panel hidden">
@@ -6470,7 +6501,7 @@ var WORDS = [
     for (var j = 0; j < tabs.length; j++) {
       tabs[j].classList.toggle('is-active', tabs[j].getAttribute('data-tab') === name);
     }
-    ['start', 'word', 'weak', 'record'].forEach(function (n) {
+    ['start', 'word', 'essay', 'weak', 'record'].forEach(function (n) {
       $('tab-' + n).classList.toggle('hidden', n !== name);
     });
   }
