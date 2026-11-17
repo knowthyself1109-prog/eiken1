@@ -697,6 +697,127 @@ body { padding-top: 70px; }
 .ghost-btn:disabled { opacity: .45; cursor: default; }
 
 </style>
+<style>
+/* ============================================================
+   theme.css  --  デザインC「学習アプリ風」（2026-11-17）
+   英検対策・英文法対策・共通テスト単語の3つで共通に使う見た目。
+   各アプリの style.css の「あと」に読み込んで上書きする（動きには触らない）。
+   色は --ac（そのアプリの色）で切り替える：英検＝紫／英文法＝緑／共通テスト＝オレンジ
+   英文法・共通テスト単語には、1ファイル版を作るときに --ac を決めてから埋め込む。
+   ============================================================ */
+:root {
+  --ac: #534AB7; --ac-dark: #3C3489; --ac-soft: #EEEDFE;   /* 既定は英検の紫 */
+  --cream: #FDF3E3; --cream-2: #FAEEDA; --line: #EFE2C8; --ink: #412402; --ink-2: #7A5A2E;
+}
+
+body { background: var(--cream); color: #2c2c2a; }
+.app { background: transparent; box-shadow: none; border: 0; padding-left: 4px; padding-right: 4px; }
+.app-header { border-bottom: 0; }
+.app-header h1 { color: var(--ink); font-size: 21px; }
+.icon-btn { background: #fff; border: 2px solid var(--line); border-radius: 14px; color: var(--ink-2); }
+.lead { color: var(--ink-2); }
+
+/* ---- カード・メニュー ---- */
+.card, .menu-item, .result-box, .stat, .ustat, .weak-item, .review-item, .grade-item {
+  background: #fff; border: 2px solid var(--line); border-radius: 18px;
+}
+.menu-item .menu-name { color: var(--ink); }
+.menu-item-final { background: var(--ac-soft); border-color: var(--ac); }
+.menu-item-final .menu-name { color: var(--ac-dark); }
+
+/* ---- ボタン（押すと沈む、立体的な大きいボタン） ---- */
+.primary-btn {
+  background: var(--ac); color: #fff; border: 0; border-radius: 16px; font-weight: bold;
+  box-shadow: 0 4px 0 var(--ac-dark); transition: transform .06s, box-shadow .06s;
+}
+.primary-btn:hover { background: var(--ac); filter: brightness(1.08); }
+.primary-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--ac-dark); }
+.set-btn, .menu-item-final .set-btn, .weak-btn, .ss-btn, .dir-btn, .mock-btn {
+  background: var(--ac-soft); color: var(--ac-dark); border: 2px solid var(--ac-soft);
+  border-radius: 999px; font-weight: bold;
+}
+.set-btn:hover, .menu-item-final .set-btn:hover, .weak-btn:hover, .ss-btn:hover { background: #fff; border-color: var(--ac); }
+.ss-btn.is-active, .dir-btn.is-active { background: var(--ac); color: #fff; border-color: var(--ac); }
+.ghost-btn { border-radius: 14px; border-width: 2px; }
+
+/* ---- 4択の選択肢 ---- */
+.choice-btn {
+  background: #fff; border: 2px solid var(--line); border-radius: 16px; color: #2c2c2a;
+  box-shadow: 0 3px 0 var(--line); padding-top: 14px; padding-bottom: 14px;
+}
+.choice-btn:hover:not(:disabled) { background: var(--ac-soft); border-color: var(--ac); }
+.choice-btn.is-correct { background: #EAF3DE; border-color: #639922; color: #27500A; box-shadow: 0 3px 0 #97C459; }
+.choice-btn.is-wrong   { background: #FCEBEB; border-color: #E24B4A; color: #791F1F; box-shadow: 0 3px 0 #F09595; }
+
+/* ---- 進み具合 ---- */
+.progress-track, .goal-track { background: var(--cream-2); border-radius: 999px; }
+.progress-fill, .goal-fill { background: var(--ac); border-radius: 999px; }
+.mode-badge, .unit-badge, .mini-badge { border-radius: 999px; }
+.modal-box { border-radius: 22px; }
+
+/* ---- アプリの中のタブ：大きなタイル。スマホでは画面の下に固定（親指で押せる） ---- */
+.tab {
+  background: #fff; border: 2px solid var(--line); border-radius: 14px; color: var(--ink-2);
+  display: flex; flex-direction: column; align-items: center; gap: 2px; line-height: 1.2;
+}
+.tab:hover { background: var(--ac-soft); }
+.tab.is-active { background: var(--ac); border-color: var(--ac); color: #fff; }
+.tab::before { font-size: 19px; line-height: 1; }
+.tab[data-tab="start"]::before    { content: "📝"; }
+.tab[data-tab="word"]::before     { content: "🔤"; }
+.tab[data-tab="essay"]::before    { content: "✍️"; }
+.tab[data-tab="speak"]::before    { content: "🎤"; }
+.tab[data-tab="weak"]::before     { content: "🔁"; }
+.tab[data-tab="record"]::before   { content: "📊"; }
+.tab[data-tab="test"]::before     { content: "🏁"; }
+.tab[data-tab="pretest"]::before  { content: "🎯"; }
+.tab[data-tab="practice"]::before { content: "💪"; }
+.tab[data-tab="nyushi"]::before   { content: "🎓"; }
+@media (max-width: 560px) {
+  .tabs {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 900; margin: 0;
+    display: flex; gap: 2px; padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+    background: #fff; border-top: 2px solid var(--line);
+  }
+  .tabs .tab { flex: 1 1 0; min-width: 0; border: 0; padding: 4px 0; font-size: 11.5px; border-radius: 12px; }
+  .tabs .tab.is-active { background: var(--ac-soft); color: var(--ac-dark); }
+  body { padding-bottom: 84px; }
+}
+
+/* ---- 英検：今日のノルマを「輪」で見せる ---- */
+.today-strip {
+  display: grid; grid-template-columns: 82px minmax(0, 1fr); column-gap: 14px; align-items: center;
+  background: #fff; border: 2px solid var(--line); border-radius: 20px;
+}
+.today-strip > * { grid-column: 2; }
+.today-strip > .ts-ring { grid-column: 1; grid-row: 1 / span 5; }
+.today-strip .goal-track { display: none; }
+.ts-ring {
+  width: 78px; height: 78px; border-radius: 50%;
+  background: conic-gradient(var(--ac) calc(var(--p, 0) * 1%), var(--cream-2) 0);
+  display: flex; align-items: center; justify-content: center;
+}
+.ts-ring span {
+  width: 58px; height: 58px; border-radius: 50%; background: #fff;
+  display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: bold; color: var(--ink);
+}
+.today-strip.is-done .ts-ring { background: #639922; }
+.ts-title { color: var(--ink); }
+.ts-num { color: var(--ac-dark); }
+.ts-streak strong { color: #D85A30; }
+.today-strip .ts-foot { flex-wrap: wrap; gap: 2px 12px; }
+.ts-streak { white-space: nowrap; }
+
+/* ---- 目次（英検対策／英文法対策／共通テスト単語）：アプリごとの色のボタン ---- */
+.top-nav { background: var(--cream); box-shadow: none; border-bottom: 2px solid var(--line); }
+.top-tab { background: #fff; border: 2px solid var(--line); color: var(--ink-2); border-radius: 14px; }
+.top-tab:hover { background: #fff; filter: brightness(.97); }
+.top-tab[data-app="eiken"].is-active  { background: #534AB7; border-color: #534AB7; color: #fff; }
+.top-tab[data-app="bunpo"].is-active  { background: #0F6E56; border-color: #0F6E56; color: #fff; }
+.top-tab[data-app="kyotsu"].is-active { background: #993C1D; border-color: #993C1D; color: #fff; }
+.sub-app { background: var(--cream); }
+
+</style>
 </head>
 <body>
 
@@ -724,7 +845,8 @@ body { padding-top: 70px; }
       <p class="lead">
         結果を先生に送るための設定です。<br>
         <strong>最初の1回だけ</strong>行います（設定は端末ごとに保存されます）。<br>
-        送らずに練習だけしたい場合は、一番下のボタンから始められます。
+        この1回で、<strong>英検対策・英文法対策・共通テスト単語の3つすべて</strong>が使えるようになります。<br>
+        送らずに練習だけしたい場合は、一番下のボタンから始められます（英検対策だけ使えます）。
       </p>
 
       <label class="field">
@@ -753,7 +875,7 @@ body { padding-top: 70px; }
       <p id="setup-error" class="error-msg hidden"></p>
       <button id="btn-setup-save" class="primary-btn wide">この内容で始める</button>
       <p class="hint" style="text-align:center">
-        <button id="btn-setup-skip" class="link-btn">設定せずに練習だけ始める</button>
+        <button id="btn-setup-skip" class="link-btn">設定せずに練習だけ始める（英検対策のみ）</button>
       </p>
     </div>
   </section>
@@ -1613,6 +1735,128 @@ h3 { font-size: 17px; color: #1a3a5c; margin: 0 0 14px; }
   .result-actions .ghost-btn { flex: 1 1 100%; }
 }
 
+</style>
+<style>
+/* ============================================================
+   theme.css  --  デザインC「学習アプリ風」（2026-11-17）
+   英検対策・英文法対策・共通テスト単語の3つで共通に使う見た目。
+   各アプリの style.css の「あと」に読み込んで上書きする（動きには触らない）。
+   色は --ac（そのアプリの色）で切り替える：英検＝紫／英文法＝緑／共通テスト＝オレンジ
+   英文法・共通テスト単語には、1ファイル版を作るときに --ac を決めてから埋め込む。
+   ============================================================ */
+:root {
+  --ac: #534AB7; --ac-dark: #3C3489; --ac-soft: #EEEDFE;   /* 既定は英検の紫 */
+  --cream: #FDF3E3; --cream-2: #FAEEDA; --line: #EFE2C8; --ink: #412402; --ink-2: #7A5A2E;
+}
+
+body { background: var(--cream); color: #2c2c2a; }
+.app { background: transparent; box-shadow: none; border: 0; padding-left: 4px; padding-right: 4px; }
+.app-header { border-bottom: 0; }
+.app-header h1 { color: var(--ink); font-size: 21px; }
+.icon-btn { background: #fff; border: 2px solid var(--line); border-radius: 14px; color: var(--ink-2); }
+.lead { color: var(--ink-2); }
+
+/* ---- カード・メニュー ---- */
+.card, .menu-item, .result-box, .stat, .ustat, .weak-item, .review-item, .grade-item {
+  background: #fff; border: 2px solid var(--line); border-radius: 18px;
+}
+.menu-item .menu-name { color: var(--ink); }
+.menu-item-final { background: var(--ac-soft); border-color: var(--ac); }
+.menu-item-final .menu-name { color: var(--ac-dark); }
+
+/* ---- ボタン（押すと沈む、立体的な大きいボタン） ---- */
+.primary-btn {
+  background: var(--ac); color: #fff; border: 0; border-radius: 16px; font-weight: bold;
+  box-shadow: 0 4px 0 var(--ac-dark); transition: transform .06s, box-shadow .06s;
+}
+.primary-btn:hover { background: var(--ac); filter: brightness(1.08); }
+.primary-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--ac-dark); }
+.set-btn, .menu-item-final .set-btn, .weak-btn, .ss-btn, .dir-btn, .mock-btn {
+  background: var(--ac-soft); color: var(--ac-dark); border: 2px solid var(--ac-soft);
+  border-radius: 999px; font-weight: bold;
+}
+.set-btn:hover, .menu-item-final .set-btn:hover, .weak-btn:hover, .ss-btn:hover { background: #fff; border-color: var(--ac); }
+.ss-btn.is-active, .dir-btn.is-active { background: var(--ac); color: #fff; border-color: var(--ac); }
+.ghost-btn { border-radius: 14px; border-width: 2px; }
+
+/* ---- 4択の選択肢 ---- */
+.choice-btn {
+  background: #fff; border: 2px solid var(--line); border-radius: 16px; color: #2c2c2a;
+  box-shadow: 0 3px 0 var(--line); padding-top: 14px; padding-bottom: 14px;
+}
+.choice-btn:hover:not(:disabled) { background: var(--ac-soft); border-color: var(--ac); }
+.choice-btn.is-correct { background: #EAF3DE; border-color: #639922; color: #27500A; box-shadow: 0 3px 0 #97C459; }
+.choice-btn.is-wrong   { background: #FCEBEB; border-color: #E24B4A; color: #791F1F; box-shadow: 0 3px 0 #F09595; }
+
+/* ---- 進み具合 ---- */
+.progress-track, .goal-track { background: var(--cream-2); border-radius: 999px; }
+.progress-fill, .goal-fill { background: var(--ac); border-radius: 999px; }
+.mode-badge, .unit-badge, .mini-badge { border-radius: 999px; }
+.modal-box { border-radius: 22px; }
+
+/* ---- アプリの中のタブ：大きなタイル。スマホでは画面の下に固定（親指で押せる） ---- */
+.tab {
+  background: #fff; border: 2px solid var(--line); border-radius: 14px; color: var(--ink-2);
+  display: flex; flex-direction: column; align-items: center; gap: 2px; line-height: 1.2;
+}
+.tab:hover { background: var(--ac-soft); }
+.tab.is-active { background: var(--ac); border-color: var(--ac); color: #fff; }
+.tab::before { font-size: 19px; line-height: 1; }
+.tab[data-tab="start"]::before    { content: "📝"; }
+.tab[data-tab="word"]::before     { content: "🔤"; }
+.tab[data-tab="essay"]::before    { content: "✍️"; }
+.tab[data-tab="speak"]::before    { content: "🎤"; }
+.tab[data-tab="weak"]::before     { content: "🔁"; }
+.tab[data-tab="record"]::before   { content: "📊"; }
+.tab[data-tab="test"]::before     { content: "🏁"; }
+.tab[data-tab="pretest"]::before  { content: "🎯"; }
+.tab[data-tab="practice"]::before { content: "💪"; }
+.tab[data-tab="nyushi"]::before   { content: "🎓"; }
+@media (max-width: 560px) {
+  .tabs {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 900; margin: 0;
+    display: flex; gap: 2px; padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+    background: #fff; border-top: 2px solid var(--line);
+  }
+  .tabs .tab { flex: 1 1 0; min-width: 0; border: 0; padding: 4px 0; font-size: 11.5px; border-radius: 12px; }
+  .tabs .tab.is-active { background: var(--ac-soft); color: var(--ac-dark); }
+  body { padding-bottom: 84px; }
+}
+
+/* ---- 英検：今日のノルマを「輪」で見せる ---- */
+.today-strip {
+  display: grid; grid-template-columns: 82px minmax(0, 1fr); column-gap: 14px; align-items: center;
+  background: #fff; border: 2px solid var(--line); border-radius: 20px;
+}
+.today-strip > * { grid-column: 2; }
+.today-strip > .ts-ring { grid-column: 1; grid-row: 1 / span 5; }
+.today-strip .goal-track { display: none; }
+.ts-ring {
+  width: 78px; height: 78px; border-radius: 50%;
+  background: conic-gradient(var(--ac) calc(var(--p, 0) * 1%), var(--cream-2) 0);
+  display: flex; align-items: center; justify-content: center;
+}
+.ts-ring span {
+  width: 58px; height: 58px; border-radius: 50%; background: #fff;
+  display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: bold; color: var(--ink);
+}
+.today-strip.is-done .ts-ring { background: #639922; }
+.ts-title { color: var(--ink); }
+.ts-num { color: var(--ac-dark); }
+.ts-streak strong { color: #D85A30; }
+.today-strip .ts-foot { flex-wrap: wrap; gap: 2px 12px; }
+.ts-streak { white-space: nowrap; }
+
+/* ---- 目次（英検対策／英文法対策／共通テスト単語）：アプリごとの色のボタン ---- */
+.top-nav { background: var(--cream); box-shadow: none; border-bottom: 2px solid var(--line); }
+.top-tab { background: #fff; border: 2px solid var(--line); color: var(--ink-2); border-radius: 14px; }
+.top-tab:hover { background: #fff; filter: brightness(.97); }
+.top-tab[data-app="eiken"].is-active  { background: #534AB7; border-color: #534AB7; color: #fff; }
+.top-tab[data-app="bunpo"].is-active  { background: #0F6E56; border-color: #0F6E56; color: #fff; }
+.top-tab[data-app="kyotsu"].is-active { background: #993C1D; border-color: #993C1D; color: #fff; }
+.sub-app { background: var(--cream); }
+
+:root { --ac: #0F6E56; --ac-dark: #085041; --ac-soft: #E1F5EE; }
 </style>
 </head>
 <body>
@@ -4694,6 +4938,128 @@ h3 { font-size: 17px; color: #1a3a5c; margin: 0 0 14px; }
   .result-actions .ghost-btn { flex: 1 1 100%; }
 }
 
+</style>
+<style>
+/* ============================================================
+   theme.css  --  デザインC「学習アプリ風」（2026-11-17）
+   英検対策・英文法対策・共通テスト単語の3つで共通に使う見た目。
+   各アプリの style.css の「あと」に読み込んで上書きする（動きには触らない）。
+   色は --ac（そのアプリの色）で切り替える：英検＝紫／英文法＝緑／共通テスト＝オレンジ
+   英文法・共通テスト単語には、1ファイル版を作るときに --ac を決めてから埋め込む。
+   ============================================================ */
+:root {
+  --ac: #534AB7; --ac-dark: #3C3489; --ac-soft: #EEEDFE;   /* 既定は英検の紫 */
+  --cream: #FDF3E3; --cream-2: #FAEEDA; --line: #EFE2C8; --ink: #412402; --ink-2: #7A5A2E;
+}
+
+body { background: var(--cream); color: #2c2c2a; }
+.app { background: transparent; box-shadow: none; border: 0; padding-left: 4px; padding-right: 4px; }
+.app-header { border-bottom: 0; }
+.app-header h1 { color: var(--ink); font-size: 21px; }
+.icon-btn { background: #fff; border: 2px solid var(--line); border-radius: 14px; color: var(--ink-2); }
+.lead { color: var(--ink-2); }
+
+/* ---- カード・メニュー ---- */
+.card, .menu-item, .result-box, .stat, .ustat, .weak-item, .review-item, .grade-item {
+  background: #fff; border: 2px solid var(--line); border-radius: 18px;
+}
+.menu-item .menu-name { color: var(--ink); }
+.menu-item-final { background: var(--ac-soft); border-color: var(--ac); }
+.menu-item-final .menu-name { color: var(--ac-dark); }
+
+/* ---- ボタン（押すと沈む、立体的な大きいボタン） ---- */
+.primary-btn {
+  background: var(--ac); color: #fff; border: 0; border-radius: 16px; font-weight: bold;
+  box-shadow: 0 4px 0 var(--ac-dark); transition: transform .06s, box-shadow .06s;
+}
+.primary-btn:hover { background: var(--ac); filter: brightness(1.08); }
+.primary-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--ac-dark); }
+.set-btn, .menu-item-final .set-btn, .weak-btn, .ss-btn, .dir-btn, .mock-btn {
+  background: var(--ac-soft); color: var(--ac-dark); border: 2px solid var(--ac-soft);
+  border-radius: 999px; font-weight: bold;
+}
+.set-btn:hover, .menu-item-final .set-btn:hover, .weak-btn:hover, .ss-btn:hover { background: #fff; border-color: var(--ac); }
+.ss-btn.is-active, .dir-btn.is-active { background: var(--ac); color: #fff; border-color: var(--ac); }
+.ghost-btn { border-radius: 14px; border-width: 2px; }
+
+/* ---- 4択の選択肢 ---- */
+.choice-btn {
+  background: #fff; border: 2px solid var(--line); border-radius: 16px; color: #2c2c2a;
+  box-shadow: 0 3px 0 var(--line); padding-top: 14px; padding-bottom: 14px;
+}
+.choice-btn:hover:not(:disabled) { background: var(--ac-soft); border-color: var(--ac); }
+.choice-btn.is-correct { background: #EAF3DE; border-color: #639922; color: #27500A; box-shadow: 0 3px 0 #97C459; }
+.choice-btn.is-wrong   { background: #FCEBEB; border-color: #E24B4A; color: #791F1F; box-shadow: 0 3px 0 #F09595; }
+
+/* ---- 進み具合 ---- */
+.progress-track, .goal-track { background: var(--cream-2); border-radius: 999px; }
+.progress-fill, .goal-fill { background: var(--ac); border-radius: 999px; }
+.mode-badge, .unit-badge, .mini-badge { border-radius: 999px; }
+.modal-box { border-radius: 22px; }
+
+/* ---- アプリの中のタブ：大きなタイル。スマホでは画面の下に固定（親指で押せる） ---- */
+.tab {
+  background: #fff; border: 2px solid var(--line); border-radius: 14px; color: var(--ink-2);
+  display: flex; flex-direction: column; align-items: center; gap: 2px; line-height: 1.2;
+}
+.tab:hover { background: var(--ac-soft); }
+.tab.is-active { background: var(--ac); border-color: var(--ac); color: #fff; }
+.tab::before { font-size: 19px; line-height: 1; }
+.tab[data-tab="start"]::before    { content: "📝"; }
+.tab[data-tab="word"]::before     { content: "🔤"; }
+.tab[data-tab="essay"]::before    { content: "✍️"; }
+.tab[data-tab="speak"]::before    { content: "🎤"; }
+.tab[data-tab="weak"]::before     { content: "🔁"; }
+.tab[data-tab="record"]::before   { content: "📊"; }
+.tab[data-tab="test"]::before     { content: "🏁"; }
+.tab[data-tab="pretest"]::before  { content: "🎯"; }
+.tab[data-tab="practice"]::before { content: "💪"; }
+.tab[data-tab="nyushi"]::before   { content: "🎓"; }
+@media (max-width: 560px) {
+  .tabs {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 900; margin: 0;
+    display: flex; gap: 2px; padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+    background: #fff; border-top: 2px solid var(--line);
+  }
+  .tabs .tab { flex: 1 1 0; min-width: 0; border: 0; padding: 4px 0; font-size: 11.5px; border-radius: 12px; }
+  .tabs .tab.is-active { background: var(--ac-soft); color: var(--ac-dark); }
+  body { padding-bottom: 84px; }
+}
+
+/* ---- 英検：今日のノルマを「輪」で見せる ---- */
+.today-strip {
+  display: grid; grid-template-columns: 82px minmax(0, 1fr); column-gap: 14px; align-items: center;
+  background: #fff; border: 2px solid var(--line); border-radius: 20px;
+}
+.today-strip > * { grid-column: 2; }
+.today-strip > .ts-ring { grid-column: 1; grid-row: 1 / span 5; }
+.today-strip .goal-track { display: none; }
+.ts-ring {
+  width: 78px; height: 78px; border-radius: 50%;
+  background: conic-gradient(var(--ac) calc(var(--p, 0) * 1%), var(--cream-2) 0);
+  display: flex; align-items: center; justify-content: center;
+}
+.ts-ring span {
+  width: 58px; height: 58px; border-radius: 50%; background: #fff;
+  display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: bold; color: var(--ink);
+}
+.today-strip.is-done .ts-ring { background: #639922; }
+.ts-title { color: var(--ink); }
+.ts-num { color: var(--ac-dark); }
+.ts-streak strong { color: #D85A30; }
+.today-strip .ts-foot { flex-wrap: wrap; gap: 2px 12px; }
+.ts-streak { white-space: nowrap; }
+
+/* ---- 目次（英検対策／英文法対策／共通テスト単語）：アプリごとの色のボタン ---- */
+.top-nav { background: var(--cream); box-shadow: none; border-bottom: 2px solid var(--line); }
+.top-tab { background: #fff; border: 2px solid var(--line); color: var(--ink-2); border-radius: 14px; }
+.top-tab:hover { background: #fff; filter: brightness(.97); }
+.top-tab[data-app="eiken"].is-active  { background: #534AB7; border-color: #534AB7; color: #fff; }
+.top-tab[data-app="bunpo"].is-active  { background: #0F6E56; border-color: #0F6E56; color: #fff; }
+.top-tab[data-app="kyotsu"].is-active { background: #993C1D; border-color: #993C1D; color: #fff; }
+.sub-app { background: var(--cream); }
+
+:root { --ac: #993C1D; --ac-dark: #712B13; --ac-soft: #FAECE7; }
 </style>
 </head>
 <body>
@@ -13792,6 +14158,7 @@ var MENSETSU = {
     var done_ = done >= goal;
     host.className = 'today-strip' + (done_ ? ' is-done' : '');
     host.innerHTML =
+      '<div class="ts-ring" style="--p:' + pct + '" aria-hidden="true"><span>' + pct + '%</span></div>' +
       '<div class="ts-head">' +
         '<span class="ts-title">' + (done_ ? '🎉 今日のノルマ達成' : '今日のノルマ') + '</span>' +
         '<span class="ts-num">' + done + ' / ' + goal + ' 問</span>' +
@@ -14878,6 +15245,7 @@ var MENSETSU = {
         cfg.salt = salt;
         cfg.pwHash = nh;
         saveCfg(cfg);
+        shareSetup();   // 英文法・共通テスト単語のパスワードも同じにする
         $('cfg-pw-old').value = $('cfg-pw-new1').value = $('cfg-pw-new2').value = '';
         cfgMsg('保存しました。パスワードを変更しました。', 'ok');
       });
@@ -14925,6 +15293,7 @@ var MENSETSU = {
         className: $('setup-class').value.trim(),
         createdAt: new Date().toISOString()
       });
+      shareSetup();   // 1回の設定で、英文法・共通テスト単語もそのまま使えるようにする
       renderHome();
     });
   }
@@ -14971,9 +15340,45 @@ var MENSETSU = {
   /* 目次：英検対策（このアプリ）／英文法対策／共通テスト単語。
      英文法と共通テスト単語は、1ファイル版に埋め込んだ各アプリを、初めて開くときに iframe へ読み込む。
      記録は同じ端末の localStorage に別キー（英検 e1q_／文法 g4q_／共通テスト v4q_）で入るので混ざらない。 */
+  /* はじめての設定を1回で済ませる：英検の設定（パスワード・送信先・クラス）を、
+     英文法（g4q_setup_v1）と共通テスト単語（v4q_setup_v1）の設定にも写す。
+     3つのアプリはパスワードの作り方（salt|パスワード の SHA-256）が同じなので、そのまま通る。
+     英検側で設定するたび・パスワードを変えるたびに写し直す（パスワードは3つで常に同じになる）。 */
+  var SUB_SETUP_KEY = { bunpo: 'g4q_setup_v1', kyotsu: 'v4q_setup_v1' };
+  function shareSetup() {
+    if (!cfg || !cfg.pwHash) return false;
+    var c = { version: '1.0', salt: cfg.salt, pwHash: cfg.pwHash, gasUrl: gasUrl(),
+              className: cfg.className || '', createdAt: cfg.createdAt || new Date().toISOString(),
+              sharedFrom: 'eiken' };
+    ['bunpo', 'kyotsu'].forEach(function (n) {
+      var cur = null;
+      try { cur = JSON.parse(localStorage.getItem(SUB_SETUP_KEY[n]) || 'null'); } catch (e) { cur = null; }
+      /* 同じ設定なら何もしない（目次を切り替えるたびに読み直すと、解いている途中の問題が消えるため） */
+      if (cur && cur.pwHash === c.pwHash && cur.salt === c.salt && cur.gasUrl === c.gasUrl &&
+          (cur.className || '') === c.className) return;
+      try { localStorage.setItem(SUB_SETUP_KEY[n], JSON.stringify(c)); } catch (e) { return; }
+      /* 設定が変わったときだけ、開いてあるアプリを次に開いたとき新しい設定で読み直す */
+      var fr = $(n + '-frame');
+      if (fr && fr.getAttribute('data-loaded') && $('app-' + n).classList.contains('hidden')) {
+        fr.removeAttribute('data-loaded');
+        fr.removeAttribute('srcdoc');
+      }
+    });
+    return true;
+  }
+
   function showApp(name) {
     var msg = $('sub-app-msg');
     msg.classList.add('hidden');
+    if (name !== 'eiken' && !shareSetup()) {
+      /* 英検の「はじめての設定」がまだ（または「設定せずに練習だけ」）の端末 */
+      msg.innerHTML = '英文法対策・共通テスト単語は、<strong>はじめての設定</strong>（パスワードの登録）を済ませると使えます。' +
+        '1回の設定で、英検・英文法・共通テスト単語の3つすべてに使えます。<br>' +
+        '<button id="btn-goto-setup" class="primary-btn" style="margin-top:10px">はじめての設定をする</button>';
+      msg.classList.remove('hidden');
+      $('btn-goto-setup').onclick = function () { msg.classList.add('hidden'); showScreen('screen-setup'); };
+      name = 'eiken';
+    }
     if (name !== 'eiken') {
       var fr = $(name + '-frame');
       if (!fr.getAttribute('data-loaded')) {
