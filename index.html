@@ -817,6 +817,13 @@ body { background: var(--cream); color: #2c2c2a; }
 .top-tab[data-app="kyotsu"].is-active { background: #993C1D; border-color: #993C1D; color: #fff; }
 .sub-app { background: var(--cream); }
 
+/* ---- ログイン中の人の名前とログアウト（英検の見出しの右） ---- */
+.app-header { flex-wrap: wrap; row-gap: 8px; }
+.head-btns { align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+.who { font-size: 13px; font-weight: bold; color: var(--ink); background: #fff; border: 2px solid var(--line);
+       border-radius: 999px; padding: 5px 11px; white-space: nowrap; }
+#btn-logout { margin: 0; padding: 6px 12px; font-size: 13px; }
+
 </style>
 </head>
 <body>
@@ -833,30 +840,49 @@ body { background: var(--cream); color: #2c2c2a; }
   <header class="app-header">
     <h1 id="app-title">英検 第1問トレーニング</h1>
     <div class="head-btns">
+      <span id="who" class="who hidden"></span>
+      <button id="btn-logout" class="ghost-btn small hidden" title="ログアウト">ログアウト</button>
       <button id="btn-goal" class="icon-btn" title="1日のノルマ">🎯</button>
       <button id="btn-settings" class="icon-btn" title="設定">⚙</button>
     </div>
   </header>
 
-  <!-- ============ 初期設定（この端末で最初の1回だけ） ============ -->
+  <!-- ============ ログイン（ログアウトするまで保持。記録は人ごとに分かれる） ============ -->
   <section id="screen-setup" class="screen hidden">
     <div class="card">
-      <h2>はじめての設定</h2>
+      <h2>ログイン</h2>
       <p class="lead">
-        結果を先生に送るための設定です。<br>
-        <strong>最初の1回だけ</strong>行います（設定は端末ごとに保存されます）。<br>
-        この1回で、<strong>英検対策・英文法対策・共通テスト単語の3つすべて</strong>が使えるようになります。<br>
-        送らずに練習だけしたい場合は、一番下のボタンから始められます（英検対策だけ使えます）。
+        クラス・出席番号・氏名・パスワードを入れて、ログインしてください。<br>
+        1回ログインすれば、<strong>英検対策・英文法対策・共通テスト単語の3つすべて</strong>が使えます。<br>
+        問題を解き終わると、<strong>結果が自動で先生に送られます</strong>。<br>
+        この端末で初めての人は、そのまま新しく登録されます（パスワードは自分で決めます）。
       </p>
 
       <label class="field">
-        <span>送信用パスワード <em class="req">必須</em></span>
-        <input type="password" id="setup-pw1" autocomplete="new-password" placeholder="先生が決めたパスワード">
+        <span>クラス名</span>
+        <input type="text" id="setup-class" autocomplete="off" placeholder="例：2年3組">
       </label>
 
+      <div class="field-row">
+        <label class="field">
+          <span>出席番号 <em class="req">必須</em></span>
+          <input type="text" id="setup-number" inputmode="numeric" pattern="[0-9]*" maxlength="3" autocomplete="off" placeholder="例：12（半角数字）">
+        </label>
+        <label class="field">
+          <span>氏名 <em class="req">必須</em></span>
+          <input type="text" id="setup-name" autocomplete="off" placeholder="例：宮崎 太郎">
+        </label>
+      </div>
+
       <label class="field">
-        <span>送信用パスワード（確認） <em class="req">必須</em></span>
+        <span>パスワード <em class="req">必須</em></span>
+        <input type="password" id="setup-pw1" autocomplete="current-password" placeholder="4文字以上">
+      </label>
+
+      <label class="field hidden" id="setup-pw2-field">
+        <span>パスワード（確認） <em class="req">必須</em></span>
         <input type="password" id="setup-pw2" autocomplete="new-password" placeholder="もう一度入力">
+        <small>この端末では初めての人です。決めたパスワードを忘れないようにしてください。</small>
       </label>
 
       <label class="field" id="setup-url-field">
@@ -866,17 +892,35 @@ body { background: var(--cream); color: #2c2c2a; }
       </label>
       <p id="setup-url-auto" class="ok-msg hidden">送信先は自動で設定されました。URLの入力は要りません。</p>
 
-      <label class="field">
-        <span>クラス名（任意）</span>
-        <input type="text" id="setup-class" placeholder="例：2年3組">
-        <small>入力しておくと、送信のたびに打ち込まなくて済みます。</small>
-      </label>
-
       <p id="setup-error" class="error-msg hidden"></p>
-      <button id="btn-setup-save" class="primary-btn wide">この内容で始める</button>
+      <button id="btn-setup-save" class="primary-btn wide">ログイン</button>
       <p class="hint" style="text-align:center">
-        <button id="btn-setup-skip" class="link-btn">設定せずに練習だけ始める（英検対策のみ）</button>
+        <button id="btn-forgot" class="link-btn">パスワードを忘れた</button>
       </p>
+
+      <!-- パスワードの再設定（先生からもらう4けたのコードで、新しいパスワードを決め直す） -->
+      <div id="reset-panel" class="notice hidden">
+        <p id="reset-msg"></p>
+        <label class="field">
+          <span>再設定コード（先生からもらった4けた）</span>
+          <input type="text" id="reset-code" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" placeholder="例：0123">
+        </label>
+        <label class="field">
+          <span>新しいパスワード</span>
+          <input type="password" id="reset-pw1" autocomplete="new-password" placeholder="4文字以上">
+        </label>
+        <label class="field">
+          <span>新しいパスワード（確認）</span>
+          <input type="password" id="reset-pw2" autocomplete="new-password" placeholder="もう一度入力">
+        </label>
+        <p id="reset-error" class="error-msg hidden"></p>
+        <button id="btn-reset-do" class="primary-btn wide">パスワードを決め直す</button>
+        <p class="hint" style="text-align:center">
+          <button id="btn-reset-cancel" class="link-btn">再設定をやめる</button>
+        </p>
+      </div>
+
+      <p class="hint">共用の端末では、使い終わったら右上の「ログアウト」を押してください。</p>
     </div>
   </section>
 
@@ -908,7 +952,6 @@ body { background: var(--cream); color: #2c2c2a; }
       <p class="lead">
         <strong>単語</strong>と<strong>熟語</strong>を練習します。答え方は、意味を選ぶ・英語を選ぶ・つづりを打つ、の3つから選べます。<br>
         単語は<strong>すべてその級の過去問（一次試験16〜17回分）に出た語</strong>、熟語は<strong>第1問の選択肢に出た表現</strong>です。<br>
-        「共通テスト」の3つは、<strong>共通テスト（2021〜2026年の本試・追試）に出た語と熟語</strong>です。<br>
         間違えたものは「苦手」にたまります。解いた数は今日のノルマに入ります。🔊を押すと発音が聞けます。
       </p>
       <div id="word-switch"></div>
@@ -1202,10 +1245,10 @@ body { background: var(--cream); color: #2c2c2a; }
       <button id="btn-cfg-close" class="ghost-btn">閉じる</button>
     </div>
 
-    <div class="divider"><span>初期化</span></div>
-    <p class="hint">この端末の設定（パスワード・URL）を消して、最初の設定画面に戻します。<br>
-      学習記録（連続日数・苦手）は消えません。</p>
-    <button id="btn-cfg-reset" class="danger-btn small">この端末の設定を初期化する</button>
+    <div class="divider"><span>ログアウト</span></div>
+    <p class="hint">ログイン画面に戻ります。学習記録（連続日数・苦手）は、その人の分としてこの端末に残り、<br>
+      次に同じ人がログインすると戻ります。</p>
+    <button id="btn-cfg-reset" class="danger-btn small">ログアウトする</button>
   </div>
 </div>
 
@@ -1855,6 +1898,13 @@ body { background: var(--cream); color: #2c2c2a; }
 .top-tab[data-app="bunpo"].is-active  { background: #0F6E56; border-color: #0F6E56; color: #fff; }
 .top-tab[data-app="kyotsu"].is-active { background: #993C1D; border-color: #993C1D; color: #fff; }
 .sub-app { background: var(--cream); }
+
+/* ---- ログイン中の人の名前とログアウト（英検の見出しの右） ---- */
+.app-header { flex-wrap: wrap; row-gap: 8px; }
+.head-btns { align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+.who { font-size: 13px; font-weight: bold; color: var(--ink); background: #fff; border: 2px solid var(--line);
+       border-radius: 999px; padding: 5px 11px; white-space: nowrap; }
+#btn-logout { margin: 0; padding: 6px 12px; font-size: 13px; }
 
 :root { --ac: #0F6E56; --ac-dark: #085041; --ac-soft: #E1F5EE; }
 </style>
@@ -3929,6 +3979,7 @@ var UNIT_ORDER = ["時制","助動詞","受動態","不定詞","動名詞","分�
     $('btn-send').textContent = (r.mode === 'pretest' ? 'プレテストの結果を送信する' : '結果を送信する');
 
     showScreen('screen-result');
+    if (canAutoSend()) doSubmit(true);
   }
 
   function renderReview(r) {
@@ -4097,6 +4148,8 @@ var UNIT_ORDER = ["時制","助動詞","受動態","不定詞","動名詞","分�
 
     $('send-pw').value = '';
     $('send-class').value = cfg.className || '';
+    if (cfg.number) $('send-number').value = cfg.number;
+    if (cfg.name) $('send-name').value = cfg.name;
     $('submit-error').classList.add('hidden');
 
     $('submit-form').classList.remove('hidden');
@@ -4114,21 +4167,30 @@ var UNIT_ORDER = ["時制","助動詞","受動態","不定詞","動名詞","分�
     el.classList.remove('hidden');
   }
 
-  function doSubmit() {
-    var pw     = $('send-pw').value;
-    var klass  = $('send-class').value.trim();
-    var number = $('send-number').value.trim();
-    var name   = $('send-name').value.trim();
+  /** 英検アプリ（英語マスター）に組み込まれ、出席番号・氏名を受け取っているときだけ自動送信する。
+      単体で使うときは今までどおり（cfg.sharedFrom が無いので自動送信しない） */
+  function canAutoSend() {
+    return !!(cfg && cfg.pwHash && cfg.sharedFrom === 'eiken' && cfg.number && cfg.name &&
+              (cfg.gasUrl || DEFAULT_GAS_URL));
+  }
 
-    $('submit-error').classList.add('hidden');
+  /* auto=true … 解き終わったときの自動送信（画面は出さず、保存してある出席番号・氏名で送る） */
+  function doSubmit(auto) {
+    var pw     = auto ? '' : $('send-pw').value;
+    var klass  = auto ? (cfg.className || '') : $('send-class').value.trim();
+    var number = auto ? String(cfg.number) : $('send-number').value.trim();
+    var name   = auto ? String(cfg.name) : $('send-name').value.trim();
 
-    if (!pw)     { submitError('送信用パスワードを入力してください。'); return; }
-    if (!number) { submitError('出席番号を入力してください。'); return; }
-    if (!name)   { submitError('氏名を入力してください。'); return; }
+    if (!auto) {
+      $('submit-error').classList.add('hidden');
+      if (!pw)     { submitError('送信用パスワードを入力してください。'); return; }
+      if (!number) { submitError('出席番号を入力してください。'); return; }
+      if (!name)   { submitError('氏名を入力してください。'); return; }
+    }
 
     /* 送信ボタンを押した時点の結果を確定させる（照合の待ち時間中に別の結果へ変わらないように） */
     var r = lastResult;
-    hashPw(pw, cfg.salt).then(function (h) {
+    (auto ? Promise.resolve(cfg.pwHash) : hashPw(pw, cfg.salt)).then(function (h) {
       if (h !== cfg.pwHash) {
         submitError('パスワードが違います。');
         return;
@@ -4170,29 +4232,46 @@ var UNIT_ORDER = ["時制","助動詞","受動態","不定詞","動名詞","分�
         durationSec:  Math.round((r.finishedAt - r.startedAt) / 1000)
       };
 
-      $('submit-form').classList.add('hidden');
-      $('submit-progress').classList.remove('hidden');
+      var st = $('send-state');
+      if (auto) {
+        st.className = 'send-state send-ok';
+        st.textContent = '⏳ 結果を先生に送っています…';
+        st.classList.remove('hidden');
+        $('btn-send').disabled = true;
+      } else {
+        $('submit-form').classList.add('hidden');
+        $('submit-progress').classList.remove('hidden');
+      }
 
       sendToSheet(payload).then(function () {
-        $('submit-progress').classList.add('hidden');
-        $('submit-done').classList.remove('hidden');
-        $('submit-done-msg').innerHTML =
-          '<span class="ok-msg" style="display:block">✅ 送信が完了しました。<br>' +
-          esc(klass) + '　' + esc(number) + '番　' + esc(name) + '　さんの' +
-          (r.mode === 'pretest' ? '<strong>プレテスト</strong>' : r.modeLabel) + 'の結果を記録しました。</span>';
-
-        var st = $('send-state');
+        if (!auto) {
+          $('submit-progress').classList.add('hidden');
+          $('submit-done').classList.remove('hidden');
+          $('submit-done-msg').innerHTML =
+            '<span class="ok-msg" style="display:block">✅ 送信が完了しました。<br>' +
+            esc(klass) + '　' + esc(number) + '番　' + esc(name) + '　さんの' +
+            (r.mode === 'pretest' ? '<strong>プレテスト</strong>' : r.modeLabel) + 'の結果を記録しました。</span>';
+        }
+        if (lastResult !== r) return;   // 送っている間に次を始めていたら、画面はそのまま
         st.className = 'send-state send-ok';
-        st.textContent = '✅ 送信済み（' + nowStamp() + '）';
+        st.textContent = '✅ ' + (auto ? '自動で送信しました（' + number + '番 ' + name + '・' : '送信済み（') + nowStamp() + '）';
         st.classList.remove('hidden');
         $('btn-send').disabled = true;
         $('btn-send').textContent = '送信済み';
 
       }, function (err) {
-        $('submit-progress').classList.add('hidden');
-        $('submit-form').classList.remove('hidden');
-        submitError('送信できませんでした：' + err.message +
-          '\n通信環境と、⚙設定の送信先URLをご確認ください。');
+        if (!auto) {
+          $('submit-progress').classList.add('hidden');
+          $('submit-form').classList.remove('hidden');
+          submitError('送信できませんでした：' + err.message +
+            '\n通信環境と、⚙設定の送信先URLをご確認ください。');
+          return;
+        }
+        if (lastResult !== r) return;
+        st.className = 'send-state send-ng';
+        st.textContent = '⚠ 自動で送れませんでした（' + err.message + '）。電波のよいところで「結果を送信する」を押してください。';
+        st.classList.remove('hidden');
+        $('btn-send').disabled = false;
       });
     });
   }
@@ -4336,7 +4415,7 @@ var UNIT_ORDER = ["時制","助動詞","受動態","不定詞","動名詞","分�
     };
 
     /* 送信モーダル */
-    $('btn-submit-do').onclick     = doSubmit;
+    $('btn-submit-do').onclick     = function () { doSubmit(false); };
     $('btn-submit-cancel').onclick = closeSubmit;
     $('btn-submit-close').onclick  = closeSubmit;
 
@@ -5058,6 +5137,13 @@ body { background: var(--cream); color: #2c2c2a; }
 .top-tab[data-app="bunpo"].is-active  { background: #0F6E56; border-color: #0F6E56; color: #fff; }
 .top-tab[data-app="kyotsu"].is-active { background: #993C1D; border-color: #993C1D; color: #fff; }
 .sub-app { background: var(--cream); }
+
+/* ---- ログイン中の人の名前とログアウト（英検の見出しの右） ---- */
+.app-header { flex-wrap: wrap; row-gap: 8px; }
+.head-btns { align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+.who { font-size: 13px; font-weight: bold; color: var(--ink); background: #fff; border: 2px solid var(--line);
+       border-radius: 999px; padding: 5px 11px; white-space: nowrap; }
+#btn-logout { margin: 0; padding: 6px 12px; font-size: 13px; }
 
 :root { --ac: #993C1D; --ac-dark: #712B13; --ac-soft: #FAECE7; }
 </style>
@@ -7237,6 +7323,7 @@ var WORDS = [
     $('btn-send').textContent = (r.mode === 'pretest' ? 'プレテストの結果を送信する' : '結果を送信する');
 
     showScreen('screen-result');
+    if (canAutoSend()) doSubmit(true);
   }
 
   function renderReview(r) {
@@ -7389,6 +7476,8 @@ var WORDS = [
 
     $('send-pw').value = '';
     $('send-class').value = cfg.className || '';
+    if (cfg.number) $('send-number').value = cfg.number;
+    if (cfg.name) $('send-name').value = cfg.name;
     $('submit-error').classList.add('hidden');
 
     /* 送信先が未設定なら、先に伝えておきます（コピー／Gmailは使えます） */
@@ -7411,19 +7500,29 @@ var WORDS = [
     el.classList.remove('hidden');
   }
 
-  function doSubmit() {
-    var pw     = $('send-pw').value;
-    var klass  = $('send-class').value.trim();
-    var number = $('send-number').value.trim();
-    var name   = $('send-name').value.trim();
+  /** 英検アプリ（英語マスター）に組み込まれ、出席番号・氏名を受け取っているときだけ自動送信する。
+      単体で使うときは今までどおり（cfg.sharedFrom が無いので自動送信しない） */
+  function canAutoSend() {
+    return !!(cfg && cfg.pwHash && cfg.sharedFrom === 'eiken' && cfg.number && cfg.name &&
+              (cfg.gasUrl || DEFAULT_GAS_URL));
+  }
 
-    $('submit-error').classList.add('hidden');
+  /* auto=true … 解き終わったときの自動送信（画面は出さず、保存してある出席番号・氏名で送る） */
+  function doSubmit(auto) {
+    var pw     = auto ? '' : $('send-pw').value;
+    var klass  = auto ? (cfg.className || '') : $('send-class').value.trim();
+    var number = auto ? String(cfg.number) : $('send-number').value.trim();
+    var name   = auto ? String(cfg.name) : $('send-name').value.trim();
 
-    if (!pw)     { submitError('送信用パスワードを入力してください。'); return; }
-    if (!number) { submitError('出席番号を入力してください。'); return; }
-    if (!name)   { submitError('氏名を入力してください。'); return; }
+    if (!auto) {
+      $('submit-error').classList.add('hidden');
+      if (!pw)     { submitError('送信用パスワードを入力してください。'); return; }
+      if (!number) { submitError('出席番号を入力してください。'); return; }
+      if (!name)   { submitError('氏名を入力してください。'); return; }
+    }
 
-    hashPw(pw, cfg.salt).then(function (h) {
+    var r = lastResult;
+    (auto ? Promise.resolve(cfg.pwHash) : hashPw(pw, cfg.salt)).then(function (h) {
       if (h !== cfg.pwHash) {
         submitError('パスワードが違います。');
         return;
@@ -7435,7 +7534,6 @@ var WORDS = [
         saveCfg(cfg);
       }
 
-      var r = lastResult;
       var payload = {
         submissionId: r.submissionId,
         appVersion:   APP_VERSION,
@@ -7468,29 +7566,46 @@ var WORDS = [
         durationSec:  Math.round((r.finishedAt - r.startedAt) / 1000)
       };
 
-      $('submit-form').classList.add('hidden');
-      $('submit-progress').classList.remove('hidden');
+      var st = $('send-state');
+      if (auto) {
+        st.className = 'send-state send-ok';
+        st.textContent = '⏳ 結果を先生に送っています…';
+        st.classList.remove('hidden');
+        $('btn-send').disabled = true;
+      } else {
+        $('submit-form').classList.add('hidden');
+        $('submit-progress').classList.remove('hidden');
+      }
 
       sendToSheet(payload).then(function () {
-        $('submit-progress').classList.add('hidden');
-        $('submit-done').classList.remove('hidden');
-        $('submit-done-msg').innerHTML =
-          '<span class="ok-msg" style="display:block">✅ 送信が完了しました。<br>' +
-          esc(klass) + '　' + esc(number) + '番　' + esc(name) + '　さんの' +
-          (r.mode === 'pretest' ? '<strong>プレテスト</strong>' : r.modeLabel) + 'の結果を記録しました。</span>';
-
-        var st = $('send-state');
+        if (!auto) {
+          $('submit-progress').classList.add('hidden');
+          $('submit-done').classList.remove('hidden');
+          $('submit-done-msg').innerHTML =
+            '<span class="ok-msg" style="display:block">✅ 送信が完了しました。<br>' +
+            esc(klass) + '　' + esc(number) + '番　' + esc(name) + '　さんの' +
+            (r.mode === 'pretest' ? '<strong>プレテスト</strong>' : r.modeLabel) + 'の結果を記録しました。</span>';
+        }
+        if (lastResult !== r) return;   // 送っている間に次を始めていたら、画面はそのまま
         st.className = 'send-state send-ok';
-        st.textContent = '✅ 送信済み（' + nowStamp() + '）';
+        st.textContent = '✅ ' + (auto ? '自動で送信しました（' + number + '番 ' + name + '・' : '送信済み（') + nowStamp() + '）';
         st.classList.remove('hidden');
         $('btn-send').disabled = true;
         $('btn-send').textContent = '送信済み';
 
       }, function (err) {
-        $('submit-progress').classList.add('hidden');
-        $('submit-form').classList.remove('hidden');
-        submitError('送信できませんでした：' + err.message +
-          '\n通信環境と、⚙設定の送信先URLをご確認ください。');
+        if (!auto) {
+          $('submit-progress').classList.add('hidden');
+          $('submit-form').classList.remove('hidden');
+          submitError('送信できませんでした：' + err.message +
+            '\n通信環境と、⚙設定の送信先URLをご確認ください。');
+          return;
+        }
+        if (lastResult !== r) return;
+        st.className = 'send-state send-ng';
+        st.textContent = '⚠ 自動で送れませんでした（' + err.message + '）。電波のよいところで「結果を送信する」を押してください。';
+        st.classList.remove('hidden');
+        $('btn-send').disabled = false;
       });
     });
   }
@@ -7688,7 +7803,7 @@ var WORDS = [
     };
 
     /* 送信モーダル */
-    $('btn-submit-do').onclick     = doSubmit;
+    $('btn-submit-do').onclick     = function () { doSubmit(false); };
     $('btn-submit-cancel').onclick = closeSubmit;
     $('btn-submit-close').onclick  = closeSubmit;
 
@@ -12217,681 +12332,6 @@ var WORDS = [
 
 </script>
 <script>
-/* kyotsu.js -- 共通テストの単語（英検アプリの単語タブ用）
-   英単語トレーニングアプリの words.js の写し。変えたのは変数名だけ（WORDS→KYOTSU_WORDS、UNIT_ORDER→KYOTSU_UNIT_ORDER）。
-   語を直すときは英単語アプリ側（正本はそのスプレッドシート）を直してから、引き継ぎメモの手順でこのファイルを作り直す。 */
-/* ============================================================
-   words.js  --  英単語4択データ
-   1語 = { u:レベル, d:難易度, q:英単語, p:品詞, c:[選択肢x4], a:正解,
-           x:例文, xj:例文訳, e:メモ, alt:[入力式の別解] }
-     u  … "基礎" / "標準" / "ハイレベル"
-     d  … 1=そのレベルの基本  2=そのレベルのやや難
-           出題時は 基本4 : やや難1 の割合で混ぜます
-     p  … 動/名/形/副/熟　など（バッジに出るだけ。省略可）
-     x, xj, e, alt … 省略可
-
-   ※ このファイルは「一度もネットにつながっていない端末」のための予備です。
-     ふだん直すのは**スプレッドシートの「単語データ」シート**（そちらが正本）。
-
-   【語の選び方】★ここが前提です
-   共通テスト英語の本試験・追試験 2021〜2026 を全文テキスト化してコーパスを作った。
-     ・リーディング 2021〜2026 の12回分
-     ・2026年はリスニングの問題冊子とスクリプトも収録
-     ・2021〜2024 と 2026 は pdf.js で抽出、2025 の2回は画像PDFなので Windows内蔵OCR
-   合計 約57.5万字・異なり語 約7,700語。
-
-   **収録している全502件が、このコーパスのどこかに実際に出ている。**
-   （2026-08-26 に機械照合。屈折形・複数形も既出として数える。
-     例：phenomenon は phenomena、investigate は investigating としてのみ出現）
-
-     基礎     … 出現回数が多い中心語。ここが抜けると本文の骨格が読めない
-     標準     … 中頻度の内容語。設問の言い換えに使われる語を優先
-     ハイレベル … 出現は少ないが、第5・6問の説明文・論説文で意味が取れないと詰まる語
-
-   ※ water / time / people のような中学レベルの語と、
-     mosquito / onigiri / graphite のようなその年だけのトピック語は意図的に外している。
-   ※ 語を足すときは、**過去問に出ている語かどうかを必ず確かめてから**足すこと。
-     確かめ方は「引き継ぎメモ.md」の《語彙の裏取り手順》を参照。
-
-   ※ 1行1語。追加・修正はこの形式に合わせてください。並び順に意味はありません。
-   ============================================================ */
-
-var KYOTSU_UNIT_ORDER = ['基礎', '標準', 'ハイレベル'];
-
-var KYOTSU_WORDS = [
-
-/* ============ 基礎 ============ */
-{u:"基礎", d:1, q:"achieve", p:"動", c:["達成する","放棄する","延期する","要求する"], a:"達成する", x:"She achieved her goal after years of effort.", xj:"彼女は何年もの努力の末に目標を達成した。", e:"名詞は achievement（達成・業績）。achieve a goal の形で覚える。"},
-{u:"基礎", d:1, q:"avoid", p:"動", c:["避ける","招く","許す","比べる"], a:"避ける", x:"You should avoid using your phone while walking.", xj:"歩きながらスマホを使うのは避けるべきだ。", e:"あとに動詞が続くときは必ず -ing（avoid to use は誤り）。"},
-{u:"基礎", d:1, q:"improve", p:"動", c:["改善する","破壊する","延ばす","説明する"], a:"改善する", x:"Reading every day will improve your English.", xj:"毎日読むことで英語が上達する。", e:"名詞は improvement。「よくする／上達する」の両方に使える。"},
-{u:"基礎", d:1, q:"provide", p:"動", c:["提供する","禁止する","返却する","評価する"], a:"提供する", x:"The school provides students with free lunch.", xj:"その学校は生徒に無料の昼食を提供している。", e:"provide A with B ＝ provide B for A。前置詞の違いに注意。"},
-{u:"基礎", d:1, q:"reduce", p:"動", c:["減らす","増やす","保つ","分ける"], a:"減らす", x:"We must reduce the amount of plastic waste.", xj:"プラスチックごみの量を減らさなければならない。", e:"reduce A by 30% で「Aを30%減らす」。図表問題で頻出。"},
-{u:"基礎", d:1, q:"require", p:"動", c:["必要とする","拒否する","修理する","記録する"], a:"必要とする", x:"This job requires a lot of patience.", xj:"この仕事には多くの忍耐が必要だ。", e:"名詞は requirement（必要条件）。need より少し硬い語。"},
-{u:"基礎", d:1, q:"allow", p:"動", c:["許す","疑う","数える","並べる"], a:"許す", x:"My parents allow me to stay up until eleven.", xj:"両親は私が11時まで起きているのを許してくれる。", e:"allow 人 to do の形が基本。掲示・案内文で頻出。"},
-{u:"基礎", d:1, q:"prevent", p:"動", c:["妨げる","促進する","説得する","翻訳する"], a:"妨げる", x:"The heavy rain prevented us from going out.", xj:"大雨のせいで私たちは外出できなかった。", e:"prevent A from doing。from を落とさないこと。"},
-{u:"基礎", d:1, q:"decide", p:"動", c:["決める","迷う","諦める","勧める"], a:"決める", x:"We decided to hold the event online.", xj:"私たちはそのイベントをオンラインで開くことに決めた。", e:"decide to do／decide that ...。名詞は decision。"},
-{u:"基礎", d:1, q:"realize", p:"動", c:["気づく・悟る","無視する","反対する","繰り返す"], a:"気づく・悟る", x:"I suddenly realized that I had left my key at home.", xj:"私は鍵を家に置いてきたことに突然気づいた。", e:"「実現する」の意味もある。イギリス式つづりは realise。"},
-{u:"基礎", d:1, q:"suggest", p:"動", c:["提案する・示唆する","命令する","否定する","賞賛する"], a:"提案する・示唆する", x:"The data suggests that sleep affects memory.", xj:"そのデータは睡眠が記憶に影響することを示している。", e:"名詞は suggestion。「（データが）示唆する」は長文で最重要。"},
-{u:"基礎", d:1, q:"describe", p:"動", c:["描写する・説明する","省略する","分解する","出版する"], a:"描写する・説明する", x:"Which sentence best describes the graph?", xj:"どの文がそのグラフを最もよく表しているか。", e:"設問文で必ず出る。名詞は description。"},
-{u:"基礎", d:1, q:"include", p:"動", c:["含む","除外する","交換する","公表する"], a:"含む", x:"The price includes breakfast and Wi-Fi.", xj:"料金には朝食とWi-Fiが含まれる。", e:"反意語は exclude。including は前置詞的に「～を含めて」。"},
-{u:"基礎", d:1, q:"continue", p:"動", c:["続ける","中断する","短くする","交代する"], a:"続ける", x:"The rain continued for three days.", xj:"雨は3日間降り続いた。", e:"continue to do も continue doing も可。名詞は continuation。"},
-{u:"基礎", d:1, q:"prepare", p:"動", c:["準備する","片付ける","延期する","比較する"], a:"準備する", x:"I'm preparing for the entrance exam.", xj:"私は入学試験の準備をしている。", e:"prepare for A（Aに備える）／prepare A（Aを用意する）。"},
-{u:"基礎", d:1, q:"attend", p:"動", c:["出席する","欠席する","招待する","司会する"], a:"出席する", x:"About fifty students attended the workshop.", xj:"およそ50人の生徒がその講習会に出席した。", e:"他動詞なので attend to school とは言わない。名詞は attendance。"},
-{u:"基礎", d:1, q:"receive", p:"動", c:["受け取る","送る","断る","返す"], a:"受け取る", x:"You will receive a confirmation email.", xj:"確認メールが届きます。", e:"つづり注意（i の前に e ではない）。名詞は reception。"},
-{u:"基礎", d:1, q:"collect", p:"動", c:["集める","配る","捨てる","隠す"], a:"集める", x:"We collected used bottles for recycling.", xj:"私たちはリサイクルのために使用済みボトルを集めた。", e:"名詞は collection。gather とほぼ同義。"},
-{u:"基礎", d:1, q:"protect", p:"動", c:["守る","攻撃する","汚す","分ける"], a:"守る", x:"Wear a hat to protect your skin from the sun.", xj:"日差しから肌を守るために帽子をかぶりなさい。", e:"protect A from B。名詞は protection。"},
-{u:"基礎", d:1, q:"contain", p:"動", c:["含んでいる","放出する","比べる","運ぶ"], a:"含んでいる", x:"This drink contains a lot of sugar.", xj:"この飲み物には砂糖が多く含まれている。", e:"include が「一部として含む」、contain は「中身として含む」。"},
-{u:"基礎", d:1, q:"complete", p:"動・形", c:["完成させる・完全な","省く・不完全な","始める・最初の","競う・競争的な"], a:"完成させる・完全な", x:"Please complete the form before Friday.", xj:"金曜日までに用紙に記入してください。", e:"申込書の指示で「記入する」の意味でよく使う。副詞 completely。"},
-{u:"基礎", d:1, q:"create", p:"動", c:["作り出す","壊す","模倣する","保管する"], a:"作り出す", x:"He created a poster for the school festival.", xj:"彼は文化祭のポスターを作った。", e:"名詞は creation、形容詞は creative（創造的な）。"},
-{u:"基礎", d:1, q:"develop", p:"動", c:["発展させる・身につける","縮小する","分解する","否定する"], a:"発展させる・身につける", x:"Reading helps you develop your vocabulary.", xj:"読書は語彙を伸ばすのに役立つ。", e:"名詞は development。「（能力を）伸ばす」の意味が長文で頻出。"},
-{u:"基礎", d:1, q:"share", p:"動", c:["共有する","独占する","分解する","交換する"], a:"共有する", x:"Let's share our ideas in small groups.", xj:"小グループで意見を出し合いましょう。", e:"share A with B。名詞では「分け前・割合」。"},
-{u:"基礎", d:1, q:"spend", p:"動", c:["（時間・お金を）使う","節約する","借りる","数える"], a:"（時間・お金を）使う", x:"I spend two hours a day studying English.", xj:"私は1日2時間を英語の勉強に使っている。", e:"spend 時間 (in) doing／spend お金 on A。"},
-{u:"基礎", d:1, q:"explain", p:"動", c:["説明する","省略する","主張する","翻訳する"], a:"説明する", x:"Can you explain why you chose this topic?", xj:"なぜこの話題を選んだのか説明してもらえますか。", e:"explain 人 A は不可。explain A to 人 の語順。"},
-{u:"基礎", d:1, q:"notice", p:"動・名", c:["気づく・掲示","忘れる・記憶","隠す・秘密","許す・許可"], a:"気づく・掲示", x:"Did you notice the sign on the door?", xj:"ドアの掲示に気づきましたか。", e:"名詞の「掲示・通知」は共通テストの図表問題で頻出。"},
-{u:"基礎", d:1, q:"recommend", p:"動", c:["勧める","禁じる","批判する","延期する"], a:"勧める", x:"I recommend visiting the museum in the morning.", xj:"午前中に博物館を訪れることをお勧めします。", e:"recommend doing／recommend that S (should) do。"},
-{u:"基礎", d:1, q:"support", p:"動・名", c:["支える・支援","妨げる・妨害","省く・省略","競う・競争"], a:"支える・支援", x:"Many volunteers support this event every year.", xj:"多くのボランティアが毎年このイベントを支えている。", e:"「（主張を）裏づける」の意味でも長文に出る。"},
-{u:"基礎", d:1, q:"maintain", p:"動", c:["維持する","放棄する","加速する","短縮する"], a:"維持する", x:"It is hard to maintain a healthy diet.", xj:"健康的な食生活を維持するのは難しい。", e:"名詞は maintenance（維持・整備）。"},
-{u:"基礎", d:1, q:"increase", p:"動・名", c:["増加する・増加","減少する・減少","停止する・停止","移動する・移動"], a:"増加する・増加", x:"The number of visitors increased by 20 percent.", xj:"来訪者数は20パーセント増加した。", e:"動詞と名詞でアクセント位置が変わる（動:in-CREASE／名:IN-crease）。"},
-{u:"基礎", d:1, q:"offer", p:"動・名", c:["申し出る・申し出","断る・拒否","命じる・命令","祝う・祝い"], a:"申し出る・申し出", x:"He offered to carry my bags.", xj:"彼は私のかばんを運ぼうと申し出てくれた。", e:"offer to do／offer 人 物。案内文の「特典」の意味も。"},
-{u:"基礎", d:1, q:"remove", p:"動", c:["取り除く","付け加える","保存する","計測する"], a:"取り除く", x:"Please remove your shoes before entering.", xj:"入る前に靴を脱いでください。", e:"名詞は removal。「脱ぐ」「外す」にも使う。"},
-{u:"基礎", d:1, q:"understand", p:"動", c:["理解する","誤解する","忘れる","無視する"], a:"理解する", x:"I couldn't understand what he was saying.", xj:"彼が何を言っているのか理解できなかった。", e:"名詞は understanding（理解）。misunderstand は「誤解する」。"},
-{u:"基礎", d:1, q:"believe", p:"動", c:["信じる","疑う","証明する","否定する"], a:"信じる", x:"Many people believe that exercise reduces stress.", xj:"運動はストレスを減らすと多くの人が信じている。", e:"believe A（Aを信じる）／believe in A（Aの存在・価値を信じる）。"},
-{u:"基礎", d:1, q:"agree", p:"動", c:["同意する","反対する","延期する","無視する"], a:"同意する", x:"Not everyone agreed with the new rule.", xj:"全員が新しい規則に賛成したわけではない。", e:"agree with 人／agree to 提案。名詞は agreement。"},
-{u:"基礎", d:1, q:"discuss", p:"動", c:["話し合う","黙る","命令する","中断する"], a:"話し合う", x:"We discussed the problem for an hour.", xj:"私たちはその問題について1時間話し合った。", e:"他動詞なので discuss about は誤り。名詞は discussion。"},
-{u:"基礎", d:1, q:"remember", p:"動", c:["覚えている・思い出す","忘れる","誤解する","無視する"], a:"覚えている・思い出す", x:"I remember meeting her at the festival.", xj:"祭りで彼女に会ったのを覚えている。", e:"remember doing（したのを覚えている）／remember to do（忘れずにする）。"},
-{u:"基礎", d:1, q:"follow", p:"動", c:["ついていく・従う","導く","逆らう","止める"], a:"ついていく・従う", x:"Please follow the instructions carefully.", xj:"指示によく従ってください。", e:"the following（次の～）は設問文で毎回出る。"},
-{u:"基礎", d:1, q:"expect", p:"動", c:["予期する","疑う","諦める","忘れる"], a:"予期する", x:"We expect about 200 people to attend.", xj:"約200人が参加すると見込んでいる。", e:"expect 人 to do。名詞は expectation。"},
-{u:"基礎", d:1, q:"lead", p:"動", c:["導く・つながる","従う","妨げる","分かれる"], a:"導く・つながる", x:"Small changes can lead to big results.", xj:"小さな変化が大きな結果につながることがある。", e:"lead to A（Aにつながる）が長文の因果関係で頻出。"},
-{u:"基礎", d:1, q:"hold", p:"動", c:["開催する・持つ","中止する","貸す","壊す"], a:"開催する・持つ", x:"The contest will be held on August 5.", xj:"そのコンテストは8月5日に開催される。", e:"受動態 be held（開催される）で案内文に頻出。過去形は held。"},
-{u:"基礎", d:1, q:"perform", p:"動", c:["行う・演じる","省略する","破棄する","模倣する"], a:"行う・演じる", x:"The band performed three songs at the festival.", xj:"そのバンドは祭りで3曲を演奏した。", e:"名詞は performance（上演・成績）。「（実験などを）行う」でも使う。"},
-{u:"基礎", d:1, q:"participate", p:"動", c:["参加する","脱退する","主催する","反対する"], a:"参加する", x:"Anyone can participate in the volunteer program.", xj:"誰でもそのボランティア活動に参加できる。", e:"participate in A。名詞 participant（参加者）も案内文で頻出。"},
-{u:"基礎", d:2, q:"apply", p:"動", c:["申し込む・当てはまる","断る","分配する","証明する"], a:"申し込む・当てはまる", x:"You must apply for the scholarship by May 10.", xj:"5月10日までに奨学金に申し込まなければならない。", e:"apply for A（申し込む）／apply to A（当てはまる）で意味が変わる。"},
-{u:"基礎", d:2, q:"indicate", p:"動", c:["示す","隠す","否定する","延期する"], a:"示す", x:"The arrow indicates the direction of the wind.", xj:"矢印は風向きを示している。", e:"「（データが）示す」で長文に頻出。show の硬い語。"},
-{u:"基礎", d:1, q:"information", p:"名", c:["情報","想像","説明","結論"], a:"情報", x:"You can find more information on our website.", xj:"詳しい情報は当社のウェブサイトでご覧になれます。", e:"数えられない名詞。an information / informations は誤り。"},
-{u:"基礎", d:1, q:"experience", p:"名・動", c:["経験・経験する","実験・実験する","期待・期待する","説明・説明する"], a:"経験・経験する", x:"Studying abroad was a valuable experience for me.", xj:"留学は私にとって貴重な経験だった。", e:"experiment（実験）と混同しやすい。つづりで区別する。"},
-{u:"基礎", d:1, q:"environment", p:"名", c:["環境","政府","伝統","装置"], a:"環境", x:"We should protect the environment for future generations.", xj:"未来の世代のために環境を守るべきだ。", e:"形容詞は environmental。長文のテーマ語として最重要。"},
-{u:"基礎", d:1, q:"opportunity", p:"名", c:["機会","責任","困難","収入"], a:"機会", x:"Studying abroad gave me the opportunity to make new friends.", xj:"留学は新しい友人を作る機会を私に与えてくれた。", e:"chance より硬い語。an opportunity to do の形で覚える。"},
-{u:"基礎", d:1, q:"result", p:"名", c:["結果","原因","目的","方法"], a:"結果", x:"The results of the survey were surprising.", xj:"その調査の結果は驚くべきものだった。", e:"as a result（その結果）／result in A（Aという結果になる）。"},
-{u:"基礎", d:1, q:"reason", p:"名", c:["理由","季節","報酬","範囲"], a:"理由", x:"What is the main reason for the change?", xj:"その変更の主な理由は何ですか。", e:"the reason why ... の形で設問に出る。season と混同しない。"},
-{u:"基礎", d:1, q:"situation", p:"名", c:["状況","習慣","解決","記録"], a:"状況", x:"The situation improved after the meeting.", xj:"会議のあと状況は改善した。", e:"in this situation（この状況では）。動詞は situate（位置づける）。"},
-{u:"基礎", d:1, q:"activity", p:"名", c:["活動","能力","正確さ","可能性"], a:"活動", x:"The club offers many after-school activities.", xj:"その部活は放課後の活動を多く用意している。", e:"複数形 activities で使われることが多い。形容詞は active。"},
-{u:"基礎", d:1, q:"amount", p:"名", c:["量","数","形","質"], a:"量", x:"Try to reduce the amount of food you waste.", xj:"捨てる食べ物の量を減らすようにしなさい。", e:"数えられないものは amount、数えられるものは number を使う。"},
-{u:"基礎", d:1, q:"average", p:"名・形", c:["平均・平均の","合計・全部の","最大・最大の","例外・例外的な"], a:"平均・平均の", x:"The average score was 62 points.", xj:"平均点は62点だった。", e:"on average（平均して）。図表問題で必ず出る。"},
-{u:"基礎", d:1, q:"benefit", p:"名・動", c:["利益・利益を得る","損害・損害を与える","義務・義務づける","偶然・偶然起こる"], a:"利益・利益を得る", x:"Regular exercise has many health benefits.", xj:"定期的な運動には多くの健康上の利点がある。", e:"benefit from A（Aから利益を得る）。形容詞は beneficial。"},
-{u:"基礎", d:1, q:"cost", p:"名・動", c:["費用・（費用が）かかる","利益・もうかる","価値・評価する","給料・支払う"], a:"費用・（費用が）かかる", x:"The trip will cost about 30,000 yen.", xj:"その旅行は約3万円かかるだろう。", e:"過去形・過去分詞も cost。at low cost（低費用で）。"},
-{u:"基礎", d:1, q:"skill", p:"名", c:["技能","規則","段階","不足"], a:"技能", x:"Communication skills are important in any job.", xj:"コミュニケーション能力はどんな仕事でも大切だ。", e:"形容詞は skilled / skillful（熟練した）。"},
-{u:"基礎", d:1, q:"goal", p:"名", c:["目標","過程","失敗","記録"], a:"目標", x:"My goal is to read fifty English books this year.", xj:"私の目標は今年英語の本を50冊読むことだ。", e:"set a goal（目標を立てる）／achieve a goal（目標を達成する）。"},
-{u:"基礎", d:1, q:"effort", p:"名", c:["努力","効果","事故","感情"], a:"努力", x:"Thanks to everyone's efforts, the event was a success.", xj:"皆の努力のおかげでイベントは成功した。", e:"make an effort（努力する）。effect（効果）と混同しやすい。"},
-{u:"基礎", d:1, q:"effect", p:"名", c:["効果・影響","努力","事実","目的"], a:"効果・影響", x:"The medicine had no effect on my headache.", xj:"その薬は私の頭痛に効かなかった。", e:"have an effect on A。動詞 affect（影響する）と品詞で区別。"},
-{u:"基礎", d:1, q:"purpose", p:"名", c:["目的","提案","手順","印象"], a:"目的", x:"What is the purpose of this survey?", xj:"この調査の目的は何ですか。", e:"on purpose（わざと）。設問の定型表現。"},
-{u:"基礎", d:1, q:"advice", p:"名", c:["助言","広告","利点","案内係"], a:"助言", x:"He gave me some useful advice about studying.", xj:"彼は勉強について役立つ助言をくれた。", e:"数えられない名詞。a piece of advice と数える。動詞は advise。"},
-{u:"基礎", d:1, q:"attention", p:"名", c:["注意","出席","意図","発明"], a:"注意", x:"Pay attention to the underlined words.", xj:"下線部の語に注意しなさい。", e:"pay attention to A。attend（出席する）と語源は同じ。"},
-{u:"基礎", d:1, q:"research", p:"名・動", c:["研究・研究する","検索結果・検索する","予約・予約する","到達・到達する"], a:"研究・研究する", x:"Recent research shows that sleep affects memory.", xj:"最近の研究は睡眠が記憶に影響することを示している。", e:"数えられない名詞。researcher（研究者）は第6問で頻出。"},
-{u:"基礎", d:1, q:"evidence", p:"名", c:["証拠","事件","出来事","経験"], a:"証拠", x:"There is no clear evidence to support this idea.", xj:"この考えを支持する明確な証拠はない。", e:"数えられない名詞。形容詞は evident（明らかな）。"},
-{u:"基礎", d:1, q:"solution", p:"名", c:["解決策","問題","質問","条件"], a:"解決策", x:"We are looking for a simple solution to this problem.", xj:"私たちはこの問題への簡単な解決策を探している。", e:"a solution to A（Aの解決策）。to を使う点に注意。動詞は solve。"},
-{u:"基礎", d:1, q:"schedule", p:"名・動", c:["予定・予定する","規則・規定する","計算・計算する","登録・登録する"], a:"予定・予定する", x:"The concert is scheduled for July 10.", xj:"そのコンサートは7月10日に予定されている。", e:"be scheduled for A の受動態が案内文で頻出。"},
-{u:"基礎", d:1, q:"topic", p:"名", c:["話題","結論","要約","比喩"], a:"話題", x:"Each group chose a different topic for the presentation.", xj:"各班は発表のためにそれぞれ違う話題を選んだ。", e:"subject（主題）とほぼ同義。発表・レポート系の文章で頻出。"},
-{u:"基礎", d:1, q:"member", p:"名", c:["会員・部員","責任者","訪問者","案内人"], a:"会員・部員", x:"Club members must attend the meeting.", xj:"部員は会議に出席しなければならない。", e:"名詞 membership（会員資格）も案内文でよく出る。"},
-{u:"基礎", d:1, q:"audience", p:"名", c:["観客・聴衆","出演者","主催者","審査員"], a:"観客・聴衆", x:"The audience clapped for a long time.", xj:"観客は長い間拍手をした。", e:"集合名詞。発表・演劇の文章で頻出。"},
-{u:"基礎", d:1, q:"survey", p:"名", c:["調査","警備","調味料","記念品"], a:"調査", x:"According to the survey, most students use smartphones daily.", xj:"その調査によれば、ほとんどの生徒が毎日スマホを使う。", e:"conduct a survey（調査を行う）。図表問題の定番語。"},
-{u:"基礎", d:1, q:"percentage", p:"名", c:["割合","人数","合計","差額"], a:"割合", x:"The percentage of students who walk to school is 40%.", xj:"徒歩通学する生徒の割合は40%だ。", e:"percent（パーセント）との違いに注意。図表問題で頻出。"},
-{u:"基礎", d:1, q:"available", p:"形", c:["利用できる","値段の高い","危険な","似ている"], a:"利用できる", x:"Free Wi-Fi is available in this building.", xj:"この建物では無料Wi-Fiが利用できる。", e:"人が主語だと「手が空いている」。案内文・広告文で必ず出る。"},
-{u:"基礎", d:1, q:"recent", p:"形", c:["最近の","古代の","主要な","無料の"], a:"最近の", x:"A recent survey shows that young people read less.", xj:"最近の調査によれば若者は本を読まなくなっている。", e:"副詞 recently は現在完了・過去形と使う。現在形とは相性が悪い。"},
-{u:"基礎", d:1, q:"several", p:"形", c:["いくつかの","たった一つの","すべての","ほとんどない"], a:"いくつかの", x:"I have visited that museum several times.", xj:"私はその博物館を何度か訪れたことがある。", e:"a few より多め、many より少なめ。あとは必ず複数名詞。"},
-{u:"基礎", d:1, q:"particular", p:"形", c:["特定の","一般的な","平均的な","一時的な"], a:"特定の", x:"Is there any particular reason you chose this school?", xj:"この学校を選んだ特別な理由はありますか。", e:"in particular（とりわけ）。副詞 particularly も頻出。"},
-{u:"基礎", d:1, q:"similar", p:"形", c:["似ている","正反対の","独特の","不足した"], a:"似ている", x:"Their opinions are similar to mine.", xj:"彼らの意見は私のものと似ている。", e:"be similar to A。名詞は similarity。"},
-{u:"基礎", d:1, q:"necessary", p:"形", c:["必要な","不必要な","高価な","偶然の"], a:"必要な", x:"It is necessary to bring your own lunch.", xj:"自分の昼食を持参する必要がある。", e:"It is necessary (for 人) to do の形。名詞は necessity。"},
-{u:"基礎", d:1, q:"suitable", p:"形", c:["適した","不釣り合いな","予測できない","一時的な"], a:"適した", x:"This book is suitable for beginners.", xj:"この本は初心者に適している。", e:"be suitable for A。設問文の「最も適切な」で使われる。"},
-{u:"基礎", d:1, q:"expensive", p:"形", c:["高価な","安価な","豊富な","便利な"], a:"高価な", x:"The tickets were more expensive than I expected.", xj:"チケットは思っていたより高かった。", e:"反意語は cheap / inexpensive。expense（費用）から。"},
-{u:"基礎", d:1, q:"convenient", p:"形", c:["便利な","不便な","伝統的な","高価な"], a:"便利な", x:"The hotel is convenient for sightseeing.", xj:"そのホテルは観光に便利だ。", e:"人を主語にしない（I am convenient は誤り）。名詞は convenience。"},
-{u:"基礎", d:1, q:"comfortable", p:"形", c:["快適な","窮屈な","危険な","退屈な"], a:"快適な", x:"These shoes are light and comfortable.", xj:"この靴は軽くてはき心地がよい。", e:"反意語 uncomfortable も本文でよく出る。"},
-{u:"基礎", d:1, q:"popular", p:"形", c:["人気のある","不人気の","私的な","公式の"], a:"人気のある", x:"Soccer is the most popular sport in the school.", xj:"サッカーはその学校で最も人気のあるスポーツだ。", e:"be popular with / among A（Aに人気がある）。"},
-{u:"基礎", d:1, q:"international", p:"形", c:["国際的な","国内の","地域の","個人的な"], a:"国際的な", x:"She joined an international exchange program.", xj:"彼女は国際交流プログラムに参加した。", e:"inter（間）＋ national（国の）。反対は domestic（国内の）。"},
-{u:"基礎", d:1, q:"traditional", p:"形", c:["伝統的な","現代的な","実験的な","一時的な"], a:"伝統的な", x:"We tried traditional Japanese sweets.", xj:"私たちは日本の伝統的なお菓子を食べてみた。", e:"名詞は tradition。文化を扱う長文で頻出。"},
-{u:"基礎", d:1, q:"natural", p:"形", c:["自然の・当然の","人工の","故意の","一時的な"], a:"自然の・当然の", x:"It's natural to feel nervous before a speech.", xj:"スピーチの前に緊張するのは当然だ。", e:"副詞 naturally（当然・自然に）。反意語は artificial。"},
-{u:"基礎", d:1, q:"healthy", p:"形", c:["健康によい","有害な","高価な","退屈な"], a:"健康によい", x:"Try to eat a healthy breakfast every morning.", xj:"毎朝健康によい朝食をとるようにしなさい。", e:"名詞は health。healthful と使い分ける必要はない。"},
-{u:"基礎", d:1, q:"local", p:"形", c:["地元の","全国的な","外国の","私立の"], a:"地元の", x:"We interviewed some local farmers.", xj:"私たちは地元の農家の方に取材した。", e:"「各駅停車の」の意味もある。案内文・記事で頻出。"},
-{u:"基礎", d:1, q:"various", p:"形", c:["さまざまな","唯一の","静かな","不足した"], a:"さまざまな", x:"The festival attracts people from various countries.", xj:"その祭りはさまざまな国から人々を引きつける。", e:"名詞は variety。a variety of ＝ various。"},
-{u:"基礎", d:1, q:"difficult", p:"形", c:["難しい","簡単な","有名な","静かな"], a:"難しい", x:"It was difficult to decide which one to buy.", xj:"どれを買うか決めるのは難しかった。", e:"名詞は difficulty。have difficulty (in) doing。"},
-{u:"基礎", d:1, q:"useful", p:"形", c:["役に立つ","無駄な","危険な","高価な"], a:"役に立つ", x:"This app is useful for learning new words.", xj:"このアプリは新しい語を覚えるのに役立つ。", e:"be useful for doing。反意語は useless。"},
-{u:"基礎", d:1, q:"possible", p:"形", c:["可能な","不可能な","必然の","秘密の"], a:"可能な", x:"It is possible to change your seat later.", xj:"あとで席を変えることは可能です。", e:"as ... as possible（できるだけ～）。名詞は possibility。"},
-{u:"基礎", d:1, q:"certain", p:"形", c:["確かな・ある種の","不確かな","一般的な","偶然の"], a:"確かな・ある種の", x:"Certain foods can cause allergies.", xj:"ある種の食品はアレルギーを引き起こすことがある。", e:"a certain A で「ある～」。副詞 certainly（確かに）。"},
-{u:"基礎", d:1, q:"main", p:"形", c:["主な","副次的な","最終の","偶然の"], a:"主な", x:"What is the main point of this article?", xj:"この記事の主な要点は何ですか。", e:"設問文の定番。副詞 mainly（主に）も頻出。"},
-{u:"基礎", d:1, q:"actually", p:"副", c:["実際は","おそらく","ほとんど","故意に"], a:"実際は", x:"I thought it was hard, but actually it was easy.", xj:"難しいと思っていたが、実際は簡単だった。", e:"「今」の意味はない（誤りやすい）。形容詞は actual。"},
-{u:"基礎", d:1, q:"especially", p:"副", c:["特に","めったに","おそらく","同様に"], a:"特に", x:"I like fruit, especially oranges.", xj:"私は果物、特にオレンジが好きだ。", e:"specially（特別に）とは使い分けが必要。"},
-{u:"基礎", d:1, q:"probably", p:"副", c:["おそらく","確実に","めったに","故意に"], a:"おそらく", x:"He will probably arrive before noon.", xj:"彼はおそらく正午前に着くだろう。", e:"確信度は maybe < probably < certainly。"},
-{u:"基礎", d:1, q:"finally", p:"副", c:["ついに・最後に","最初に","偶然に","一時的に"], a:"ついに・最後に", x:"Finally, I would like to thank all the volunteers.", xj:"最後に、すべてのボランティアに感謝したい。", e:"発表の締めくくりの合図。at last とほぼ同義。"},
-{u:"基礎", d:1, q:"immediately", p:"副", c:["ただちに","徐々に","めったに","定期的に"], a:"ただちに", x:"Call this number immediately if you feel sick.", xj:"気分が悪くなったらただちにこの番号に電話してください。", e:"at once とほぼ同義。形容詞は immediate。"},
-{u:"基礎", d:1, q:"quickly", p:"副", c:["すばやく","ゆっくりと","静かに","注意深く"], a:"すばやく", x:"The tickets sold out quickly.", xj:"チケットはすぐに売り切れた。", e:"rapidly とほぼ同義。反意語は slowly。"},
-{u:"基礎", d:1, q:"gradually", p:"副", c:["徐々に","突然","完全に","定期的に"], a:"徐々に", x:"The temperature gradually rose during the day.", xj:"日中、気温は徐々に上がった。", e:"形容詞は gradual。図表の変化を説明する語として頻出。"},
-{u:"基礎", d:1, q:"however", p:"副", c:["しかしながら","したがって","たとえば","さらに"], a:"しかしながら", x:"The plan was good. However, it was too expensive.", xj:"その計画はよかった。しかし高すぎた。", e:"but と違い副詞。前後の文をコンマで区切る。逆接の合図。"},
-{u:"基礎", d:1, q:"therefore", p:"副", c:["したがって","しかし","たとえば","一方で"], a:"したがって", x:"It rained heavily. Therefore, the game was canceled.", xj:"激しく雨が降った。したがって試合は中止された。", e:"結論の合図。so の硬い語。"},
-{u:"基礎", d:1, q:"although", p:"接", c:["～だけれども","～なので","～する限り","～するとすぐに"], a:"～だけれども", x:"Although it was raining, we went hiking.", xj:"雨が降っていたが、私たちはハイキングに行った。", e:"though とほぼ同義。but と一緒には使えない。"},
-{u:"基礎", d:1, q:"whether", p:"接", c:["～かどうか","～のあいだ","～する前に","～するので"], a:"～かどうか", x:"I'm not sure whether he will come or not.", xj:"彼が来るかどうか私にはわからない。", e:"名詞節では if とほぼ同義。whether A or B の形も頻出。"},
-{u:"基礎", d:1, q:"despite", p:"前", c:["～にもかかわらず","～のおかげで","～に応じて","～に加えて"], a:"～にもかかわらず", x:"Despite the rain, many people came.", xj:"雨にもかかわらず多くの人が来た。", e:"前置詞なので後ろは名詞。despite of は誤り。in spite of と同義。"},
-{u:"基礎", d:2, q:"according to", p:"熟", c:["～によれば","～にもかかわらず","～の代わりに","～に加えて"], a:"～によれば", x:"According to the graph, sales dropped in July.", xj:"グラフによると、売上は7月に落ち込んだ。", e:"図表問題の設問文でほぼ毎回出る。according to me とは言わない。"},
-{u:"基礎", d:2, q:"in addition", p:"熟", c:["さらに","しかし","たとえば","つまり"], a:"さらに", x:"The hotel is cheap. In addition, it is close to the station.", xj:"そのホテルは安い。さらに駅からも近い。", e:"in addition to A なら「Aに加えて」。to の有無で品詞が変わる。"},
-{u:"基礎", d:2, q:"instead of", p:"熟", c:["～の代わりに","～と一緒に","～のせいで","～と同様に"], a:"～の代わりに", x:"Let's take the bus instead of walking.", xj:"歩く代わりにバスに乗ろう。", e:"instead 単独なら副詞で「その代わりに」。文末に置く。"},
-{u:"基礎", d:2, q:"be likely to", p:"熟", c:["～しそうである","～するはずがない","～せざるを得ない","～するのに慣れている"], a:"～しそうである", x:"Prices are likely to rise next year.", xj:"来年は物価が上がりそうだ。", e:"be unlikely to なら「～しそうにない」。推測を問う設問で頻出。"},
-{u:"基礎", d:2, q:"as well as", p:"熟", c:["～と同様に・～だけでなく","～するとすぐに","～する限り","～に反して"], a:"～と同様に・～だけでなく", x:"She speaks French as well as English.", xj:"彼女は英語だけでなくフランス語も話す。", e:"A as well as B は「Bだけでなく A も」。重点は A 側にある。"},
-{u:"基礎", d:2, q:"take part in", p:"熟", c:["～に参加する","～を担当する","～を分解する","～を思い出す"], a:"～に参加する", x:"Over 100 students took part in the event.", xj:"100人を超える生徒がそのイベントに参加した。", e:"participate in とほぼ同義。案内文で頻出。"},
-{u:"基礎", d:2, q:"in order to", p:"熟", c:["～するために","～する代わりに","～した結果","～するとすぐに"], a:"～するために", x:"He got up early in order to catch the first train.", xj:"彼は始発に乗るために早起きした。", e:"否定は in order not to do。so as to do と同義。"},
-{u:"基礎", d:2, q:"be based on", p:"熟", c:["～に基づいている","～に反している","～を担当している","～を思い出させる"], a:"～に基づいている", x:"The report is based on data from 500 students.", xj:"その報告書は500人の生徒のデータに基づいている。", e:"設問文「本文に基づいて」でも使われる。base A on B の受動態。"},
-
-{u:"基礎", d:1, q:"pattern", p:"名", c:["型・傾向","部品","許可","患者"], a:"型・傾向", x:"Researchers found a clear pattern in the data.", xj:"研究者たちはデータに明確な傾向を見つけた。", e:"sleep patterns（睡眠の型）のように「繰り返し現れる形」。図表の説明で頻出。"},
-{u:"基礎", d:1, q:"content", p:"名", c:["中身・内容","文脈","競技会","大陸"], a:"中身・内容", x:"Check the content of the box before signing.", xj:"署名する前に箱の中身を確認してください。", e:"形容詞で be content with A（Aに満足している）は別語源・別発音。"},
-{u:"基礎", d:1, q:"position", p:"名", c:["位置・立場","所有","作曲","提案"], a:"位置・立場", x:"She changed her position on the issue.", xj:"彼女はその問題についての立場を変えた。", e:"「役職」の意味でも使う。動詞では「置く・配置する」。"},
-{u:"基礎", d:1, q:"modern", p:"形", c:["現代の","古代の","中間の","地方の"], a:"現代の", x:"Modern technology has changed how we travel.", xj:"現代の技術は移動の仕方を変えた。", e:"traditional / ancient と対で問われることが多い。"},
-{u:"基礎", d:1, q:"knowledge", p:"名", c:["知識","承認","伝統","名声"], a:"知識", x:"You don't need special knowledge to join.", xj:"参加するのに特別な知識は必要ありません。", e:"数えられない名詞。動詞は know、acknowledge は「認める」。"},
-{u:"基礎", d:1, q:"education", p:"名", c:["教育","導入","編集","装備"], a:"教育", x:"Education is free for children in this country.", xj:"この国では子どもの教育は無償だ。", e:"形容詞 educational（教育的な）。長文のテーマ語として頻出。"},
-{u:"基礎", d:1, q:"society", p:"名", c:["社会・協会","安全","孤独","主権"], a:"社会・協会", x:"Smartphones have changed modern society.", xj:"スマートフォンは現代社会を変えた。", e:"形容詞は social。「協会・会」の意味でも使う（a music society）。"},
-{u:"基礎", d:1, q:"growth", p:"名", c:["成長・増加","衰退","収穫","地面"], a:"成長・増加", x:"The graph shows the growth of online shopping.", xj:"そのグラフはオンライン購入の伸びを示している。", e:"動詞は grow。population growth（人口増加）は図表問題の定番。"},
-{u:"基礎", d:1, q:"correct", p:"形・動", c:["正しい・訂正する","誤った・間違える","完全な・完成する","収集した・集める"], a:"正しい・訂正する", x:"Choose the correct answer from the four options.", xj:"4つの選択肢から正しい答えを選びなさい。", e:"設問文の定番。副詞 correctly、名詞 correction。"},
-{u:"基礎", d:1, q:"appear", p:"動", c:["現れる・～のように見える","消える","出席する","賛成する"], a:"現れる・～のように見える", x:"She appeared to be tired.", xj:"彼女は疲れているように見えた。", e:"appear to do（～のようだ）が長文で重要。反意語は disappear。"},
-{u:"基礎", d:1, q:"rather", p:"副", c:["むしろ・かなり","めったに～ない","まったく～ない","定期的に"], a:"むしろ・かなり", x:"The test was rather difficult.", xj:"そのテストはかなり難しかった。", e:"A rather than B（BよりむしろA）。would rather do（～したい）も頻出。"},
-{u:"基礎", d:1, q:"toward", p:"前", c:["～のほうへ・～に対して","～から離れて","～のあいだに","～に加えて"], a:"～のほうへ・～に対して", x:"Attitudes toward remote work have changed.", xj:"在宅勤務に対する考え方は変わった。", e:"イギリス式は towards。「～に対する（態度）」の意味が長文で重要。"},
-{u:"基礎", d:1, q:"general", p:"形", c:["一般的な・全体の","特定の","例外的な","詳細な"], a:"一般的な・全体の", x:"In general, students prefer shorter classes.", xj:"一般に、生徒は短い授業のほうを好む。", e:"in general（一般に）。副詞 generally、動詞 generalize。"},
-{u:"基礎", d:1, q:"physical", p:"形", c:["身体の・物理的な","心理的な","経済的な","社会的な"], a:"身体の・物理的な", x:"Regular physical activity keeps you healthy.", xj:"定期的な運動は健康を保つ。", e:"physical / mental（心の）が対。psychological（心理的な）と区別。"},
-
-{u:"基礎", d:1, q:"decision", p:"名", c:["決定","議論","分割","説明"], a:"決定", x:"It was a difficult decision to make.", xj:"それは下すのが難しい決定だった。", e:"make a decision（決定する）。動詞は decide。"},
-{u:"基礎", d:1, q:"damage", p:"名・動", c:["損害・傷つける","修理・直す","利益・もうける","保護・守る"], a:"損害・傷つける", x:"The storm caused serious damage to the roof.", xj:"その嵐は屋根に深刻な被害をもたらした。", e:"数えられない名詞。do / cause damage to A。"},
-{u:"基礎", d:1, q:"injury", p:"名", c:["けが","不正","調査","保険"], a:"けが", x:"He was out of the game because of an injury.", xj:"彼はけがのため試合に出られなかった。", e:"動詞は injure。形容詞 injured（けがをした）。"},
-{u:"基礎", d:1, q:"serious", p:"形", c:["深刻な・まじめな","軽い","陽気な","一時的な"], a:"深刻な・まじめな", x:"Plastic waste is a serious problem.", xj:"プラスチックごみは深刻な問題だ。", e:"副詞 seriously。「本気の」の意味でも使う。"},
-{u:"基礎", d:1, q:"current", p:"形・名", c:["現在の・流れ","過去の・記憶","将来の・予定","一時的な・中断"], a:"現在の・流れ", x:"What is your current address?", xj:"現在の住所はどちらですか。", e:"副詞 currently（現在は）。名詞では「海流・電流」。"},
-{u:"基礎", d:1, q:"outline", p:"名・動", c:["概要・要点を述べる","下書き・清書する","輪郭線・囲む","目次・並べる"], a:"概要・要点を述べる", x:"Write an outline before you start your essay.", xj:"小論文を書き始める前に構想を書きなさい。", e:"発表やレポートの準備の文脈で頻出。"},
-{u:"基礎", d:1, q:"handle", p:"動", c:["扱う・対処する","放置する","運搬する","分解する"], a:"扱う・対処する", x:"She handled the situation calmly.", xj:"彼女はその状況に落ち着いて対処した。", e:"deal with とほぼ同義。名詞では「取っ手」。"},
-{u:"基礎", d:1, q:"security", p:"名", c:["安全・警備","秘密","確信","保証書"], a:"安全・警備", x:"Please pass through the security check.", xj:"保安検査を通ってください。", e:"形容詞 secure。空港・学校の案内文で頻出。"},
-{u:"基礎", d:1, q:"election", p:"名", c:["選挙","選択科目","電気製品","感電"], a:"選挙", x:"The school held an election for class president.", xj:"その学校は学級委員長の選挙を行った。", e:"動詞は elect（選出する）。選挙を扱う長文で出る。"},
-{u:"基礎", d:1, q:"multiple", p:"形", c:["複数の・多様な","単一の","倍数の","部分的な"], a:"複数の・多様な", x:"You can choose multiple options.", xj:"複数の選択肢を選べます。", e:"multiple-choice question（多肢選択問題）。"},
-{u:"基礎", d:1, q:"overall", p:"形・副", c:["全体の・全体として","部分的な・部分的に","平均の・平均して","例外の・例外的に"], a:"全体の・全体として", x:"Overall, the event was a success.", xj:"全体としてそのイベントは成功だった。", e:"文頭に置いて全体の評価をまとめるときによく使う。"},
-{u:"基礎", d:2, q:"advanced", p:"形", c:["上級の・進んだ","初級の","平均的な","時代遅れの"], a:"上級の・進んだ", x:"This class is for advanced learners.", xj:"この授業は上級者向けです。", e:"動詞 advance（進む・前進させる）。名詞 advancement（進歩）。"},
-{u:"基礎", d:2, q:"such as", p:"熟", c:["たとえば～のような","～と同じくらい","～のせいで","～する限り"], a:"たとえば～のような", x:"Fruits such as apples and oranges are on sale.", xj:"りんごやオレンジのような果物が特売中だ。", e:"具体例を挙げる合図。for example と役割は同じ。"},
-{u:"基礎", d:2, q:"at least", p:"熟", c:["少なくとも","多くても","ちょうど","せいぜい"], a:"少なくとも", x:"You need at least two hours to finish it.", xj:"それを終えるには少なくとも2時間必要だ。", e:"反対は at most（多くても）。図表問題で数値と一緒に出る。"},
-{u:"基礎", d:2, q:"rather than", p:"熟", c:["～よりむしろ","～に加えて","～のおかげで","～と同時に"], a:"～よりむしろ", x:"He chose to walk rather than take the bus.", xj:"彼はバスに乗るよりむしろ歩くことを選んだ。", e:"A rather than B。前後は同じ形をそろえる。"},
-{u:"基礎", d:2, q:"thanks to", p:"熟", c:["～のおかげで","～にもかかわらず","～と引き換えに","～に関係なく"], a:"～のおかげで", x:"Thanks to your help, we finished on time.", xj:"あなたの助けのおかげで時間内に終わった。", e:"よい結果に使うのが基本。悪い結果なら because of。"},
-{u:"基礎", d:2, q:"in fact", p:"熟", c:["実のところ","たとえば","その結果","ところで"], a:"実のところ", x:"He looks young, but in fact he is fifty.", xj:"彼は若く見えるが、実際は50歳だ。", e:"前の内容を訂正・補強する合図。actually（実は）とほぼ同じ働き。"},
-{u:"基礎", d:2, q:"due to", p:"熟", c:["～が原因で","～のあいだ","～に応じて","～に向けて"], a:"～が原因で", x:"The delay was due to heavy snow.", xj:"その遅れは大雪が原因だった。", e:"be due to do なら「～する予定である」。形で意味が変わる。"},
-{u:"基礎", d:2, q:"as a result", p:"熟", c:["その結果","それに加えて","たとえば","一方で"], a:"その結果", x:"It rained hard. As a result, the game was canceled.", xj:"激しく雨が降った。その結果、試合は中止された。", e:"as a result of A なら「Aの結果として」。of の有無に注意。"},
-{u:"基礎", d:2, q:"no longer", p:"熟", c:["もはや～ない","まだ～ない","これ以上長く","ずっと前から"], a:"もはや～ない", x:"This service is no longer available.", xj:"このサービスはもう利用できません。", e:"not ... any longer と同じ意味。案内文でよく出る。"},
-{u:"基礎", d:2, q:"even though", p:"熟", c:["～ではあるが","～だとしても","～するとすぐに","～する限り"], a:"～ではあるが", x:"Even though it was raining, they played outside.", xj:"雨が降っていたが、彼らは外で遊んだ。", e:"事実に対して使う（even if は仮定）。although とほぼ同じだが強調が強い。"},
-{u:"基礎", d:2, q:"be able to", p:"熟", c:["～することができる","～するつもりだ","～しなければならない","～したほうがよい"], a:"～することができる", x:"I was able to finish the report before noon.", xj:"私は正午前にレポートを終えることができた。", e:"can と違い、未来形や完了形でも使える（will be able to）。"},
-
-{u:"基礎", d:1, q:"essay", p:"名", c:["小論文・作文","随筆家","論点","課題図書"], a:"小論文・作文", x:"Write an essay of about 100 words.", xj:"100語程度の小論文を書きなさい。", e:"設問文で頻出。日本語の「エッセイ（随筆）」より「論じる文章」に近い。"},
-{u:"基礎", d:1, q:"mention", p:"動", c:["言及する・話に出す","省略する","訂正する","暗記する"], a:"言及する・話に出す", x:"He did not mention the cost.", xj:"彼は費用については触れなかった。", e:"設問「Which is mentioned in the passage?」で頻出。他動詞なので about は不要。"},
-{u:"基礎", d:1, q:"phrase", p:"名", c:["語句・言い回し","段落","発音","比喩"], a:"語句・言い回し", x:"Choose the best phrase for the blank.", xj:"空所に最も適した語句を選びなさい。", e:"設問文の定番。sentence（文）より小さい単位。"},
-{u:"基礎", d:1, q:"presentation", p:"名", c:["発表","出席","保存","提出物"], a:"発表", x:"Each group will give a presentation on Friday.", xj:"各班が金曜日に発表を行う。", e:"give / make a presentation。動詞は present（発表する）。"},
-{u:"基礎", d:1, q:"sentence", p:"名", c:["文","段落","語句","感想"], a:"文", x:"Which sentence best summarizes the passage?", xj:"どの文が本文を最もよく要約しているか。", e:"設問文で毎回出る。「判決・刑」の意味もある。"},
-{u:"基礎", d:1, q:"compare", p:"動", c:["比べる","混ぜる","競う","訴える"], a:"比べる", x:"Compare the two graphs and answer the question.", xj:"2つのグラフを比べて答えなさい。", e:"compare A with / to B。名詞は comparison。"},
-{u:"基礎", d:1, q:"discussion", p:"名", c:["話し合い","結論","反論","解散"], a:"話し合い", x:"After a long discussion, they agreed on a plan.", xj:"長い話し合いののち、彼らは計画に合意した。", e:"動詞は discuss（他動詞なので about は不要）。"},
-{u:"基礎", d:1, q:"draft", p:"名・動", c:["下書き・下書きする","清書・清書する","草原・放牧する","隙間・すきま風"], a:"下書き・下書きする", x:"Show me the first draft of your essay.", xj:"小論文の第一稿を見せてください。", e:"作文の指導場面で頻出。first draft（初稿）。"},
-{u:"基礎", d:1, q:"graph", p:"名", c:["グラフ","段落","文字","図形"], a:"グラフ", x:"The graph shows the change in temperature.", xj:"そのグラフは気温の変化を示している。", e:"図表問題の設問文で毎回出る。chart（図表）と並んで覚える。"},
-{u:"基礎", d:1, q:"introduction", p:"名", c:["導入部・紹介","結論","注釈","目次"], a:"導入部・紹介", x:"Your introduction should state the topic clearly.", xj:"導入部では話題をはっきり述べるべきだ。", e:"発表・小論文の構成で使う。動詞は introduce。"},
-{u:"基礎", d:1, q:"paragraph", p:"名", c:["段落","題名","引用","注記"], a:"段落", x:"What is the main idea of the second paragraph?", xj:"第2段落の要点は何か。", e:"設問文の定番。sentence（文）が集まったもの。"},
-{u:"基礎", d:1, q:"slide", p:"名・動", c:["スライド・滑る","看板・掲げる","側面・寄る","札・貼る"], a:"スライド・滑る", x:"Put the photo on the third slide.", xj:"3枚目のスライドに写真を入れなさい。", e:"発表の資料。動詞では「滑る」（slide-slid-slid）。"},
-{u:"基礎", d:1, q:"theme", p:"名", c:["主題・テーマ","定理","主役","場面"], a:"主題・テーマ", x:"The theme of this year's festival is peace.", xj:"今年の祭りのテーマは平和だ。", e:"発音は「スィーム」。topic より大きなまとまりを指す。"},
-{u:"基礎", d:1, q:"detail", p:"名", c:["詳細・細部","概要","装飾","小売"], a:"詳細・細部", x:"For more details, see our website.", xj:"詳しくは当社のウェブサイトをご覧ください。", e:"in detail（詳しく）。案内文・設問文の両方で出る。"},
-{u:"基礎", d:1, q:"reader", p:"名", c:["読者","朗読装置","書き手","読書量"], a:"読者", x:"The author wants readers to think for themselves.", xj:"筆者は読者に自分で考えてほしいと思っている。", e:"設問「What does the author want readers to do?」で出る。"},
-{u:"基礎", d:1, q:"handout", p:"名", c:["配布資料","手渡し","援助金","控え室"], a:"配布資料", x:"Look at the handout on page two.", xj:"配布資料の2ページ目を見てください。", e:"授業・発表の場面で出る。hand out（配る）が元。"},
-{u:"基礎", d:1, q:"passage", p:"名", c:["文章・一節","通行料","小包","経過表"], a:"文章・一節", x:"Read the passage and answer the questions.", xj:"文章を読んで設問に答えなさい。", e:"設問文で毎回出る。「通路」「経過」の意味もある。"},
-{u:"基礎", d:1, q:"summary", p:"名", c:["要約","目次","概算","集計表"], a:"要約", x:"Complete the summary with one word.", xj:"1語で要約を完成させなさい。", e:"動詞は summarize。in summary（要するに）。"},
-{u:"基礎", d:1, q:"error", p:"名", c:["誤り","作動","恐怖","使者"], a:"誤り", x:"Find the error in the underlined part.", xj:"下線部の誤りを見つけなさい。", e:"mistake より硬く、システムや計算の誤りにも使う。"},
-{u:"基礎", d:1, q:"item", p:"名", c:["品物・項目","話題","部品","単位"], a:"品物・項目", x:"Check each item on the list.", xj:"リストの各項目を確認しなさい。", e:"買い物の「品」と一覧の「項目」の両方。図表問題で頻出。"},
-{u:"基礎", d:1, q:"connect", p:"動", c:["つなぐ・結びつける","切り離す","比べる","隠す"], a:"つなぐ・結びつける", x:"Connect the cable to the projector.", xj:"ケーブルをプロジェクターにつなぎなさい。", e:"connect A to / with B。名詞は connection（つながり・接続）。"},
-{u:"基礎", d:1, q:"discover", p:"動", c:["発見する","発明する","隠す","覆う"], a:"発見する", x:"Scientists discovered a new species in the forest.", xj:"科学者たちは森で新種を発見した。", e:"もともとあったものを見つけるのが discover、作り出すのは invent。名詞 discovery。"},
-{u:"基礎", d:1, q:"danger", p:"名", c:["危険","損害","勇気","警備"], a:"危険", x:"The animals are in danger of dying out.", xj:"その動物たちは絶滅の危険にさらされている。", e:"in danger of ～（～の危険がある）。形容詞は dangerous。"},
-{u:"基礎", d:1, q:"display", p:"動・名", c:["展示する・表示","隠す・隠匿","配る・配布","畳む・折り目"], a:"展示する・表示", x:"The photos are displayed in the hallway.", xj:"その写真は廊下に展示されている。", e:"「（画面に）表示する」でも使う。on display（展示中で）。"},
-{u:"基礎", d:1, q:"gather", p:"動", c:["集める・集まる","散らす","隠す","分ける"], a:"集める・集まる", x:"A crowd gathered in front of the station.", xj:"駅前に人だかりができた。", e:"自動詞（集まる）でも他動詞（集める）でも使える。collect より広い。"},
-{u:"基礎", d:1, q:"feed", p:"動", c:["えさを与える","飼い慣らす","収穫する","運ぶ"], a:"えさを与える", x:"Please do not feed the animals.", xj:"動物にえさを与えないでください。", e:"活用は feed-fed-fed。feed on A（Aを常食とする）。"},
-{u:"基礎", d:1, q:"tip", p:"名", c:["こつ・助言","合図","装置","感想"], a:"こつ・助言", x:"Here are some tips for learning vocabulary.", xj:"語彙を覚えるこつをいくつか紹介します。", e:"「チップ（心づけ）」「先端」の意味もある。記事の見出しで頻出。"},
-{u:"基礎", d:1, q:"trouble", p:"名", c:["困りごと・手間","旅程","真実","流行"], a:"困りごと・手間", x:"I had trouble finding the room.", xj:"その部屋を見つけるのに苦労した。", e:"have trouble (in) doing（～するのに苦労する）。数えられない名詞。"},
-{u:"基礎", d:1, q:"introduce", p:"動", c:["紹介する・導入する","撤去する","生産する","減らす"], a:"紹介する・導入する", x:"The school introduced a new timetable.", xj:"その学校は新しい時間割を導入した。", e:"introduce A to B。名詞は introduction。"},
-{u:"基礎", d:1, q:"medicine", p:"名", c:["薬・医学","治療室","医師","保険"], a:"薬・医学", x:"Take this medicine after meals.", xj:"この薬は食後に飲んでください。", e:"薬は「飲む」でも take。「医学」の意味でも使う。"},
-{u:"基礎", d:1, q:"temperature", p:"名", c:["温度・体温","気候","湿度","時期"], a:"温度・体温", x:"The temperature dropped below zero.", xj:"気温は零度を下回った。", e:"have a temperature（熱がある）。図表問題で頻出。"},
-{u:"基礎", d:1, q:"tradition", p:"名", c:["伝統","翻訳","移行","取引"], a:"伝統", x:"This festival is a local tradition.", xj:"この祭りは地元の伝統だ。", e:"形容詞は traditional。文化を扱う長文で頻出。"},
-{u:"基礎", d:1, q:"suddenly", p:"副", c:["突然","徐々に","静かに","確かに"], a:"突然", x:"The rain suddenly stopped.", xj:"雨が突然やんだ。", e:"形容詞は sudden。all of a sudden も同じ意味。"},
-{u:"基礎", d:1, q:"freely", p:"副", c:["自由に","無料で","率直に言えば","頻繁に"], a:"自由に", x:"Visitors can move freely around the garden.", xj:"来園者は庭を自由に歩き回れる。", e:"「無料で」は for free。free の副詞形は意味がずれるので注意。"},
-{u:"基礎", d:1, q:"extremely", p:"副", c:["非常に","わずかに","極端に言えば","最後に"], a:"非常に", x:"The test was extremely difficult.", xj:"そのテストは非常に難しかった。", e:"形容詞は extreme（極端な）。very の強い言い換え。"},
-{u:"基礎", d:1, q:"elementary", p:"形", c:["初等の・基本的な","上級の","要素の多い","選択制の"], a:"初等の・基本的な", x:"She teaches at an elementary school.", xj:"彼女は小学校で教えている。", e:"elementary school（小学校）。element（要素）から。"},
-{u:"基礎", d:1, q:"electric", p:"形", c:["電気の","電子の","磁気の","静電気を防ぐ"], a:"電気の", x:"Electric bicycles are becoming popular.", xj:"電動自転車が人気になってきている。", e:"electronic（電子の）と使い分ける。名詞は electricity。"},
-{u:"基礎", d:1, q:"raise", p:"動", c:["上げる・育てる","上がる","下げる","保つ"], a:"上げる・育てる", x:"Raise your hand if you have a question.", xj:"質問があれば手を挙げてください。", e:"他動詞。自分が上がるのは rise（自動詞）。raise money（お金を集める）。"},
-{u:"基礎", d:1, q:"produce", p:"動", c:["生産する・生み出す","消費する","輸入する","廃棄する"], a:"生産する・生み出す", x:"This factory produces paper from old newspapers.", xj:"この工場は古新聞から紙を作っている。", e:"名詞は production / product。名詞で「農産物」の意味もある。"},
-{u:"基礎", d:1, q:"customer", p:"名", c:["客・顧客","店員","習慣","税関"], a:"客・顧客", x:"The shop sends emails to its customers.", xj:"その店は客にメールを送っている。", e:"買い物客は customer、招待客は guest、乗客は passenger。"},
-{u:"基礎", d:1, q:"stress", p:"名・動", c:["重圧・強調する","休息・休む","緊張をほぐす・弛緩","伸ばす・伸張"], a:"重圧・強調する", x:"Too much stress can affect your health.", xj:"過度の重圧は健康に影響しうる。", e:"「（語を）強く読む」「強調する」の意味もある。形容詞 stressful。"},
-{u:"基礎", d:1, q:"depend", p:"動", c:["頼る・次第である","独立する","疑う","支払う"], a:"頼る・次第である", x:"It depends on the weather.", xj:"それは天気次第だ。", e:"depend on A。形容詞 dependent、反意語 independent。"},
-{u:"基礎", d:1, q:"belong", p:"動", c:["所属する","所有する","隣接する","滞在する"], a:"所属する", x:"I belong to the science club.", xj:"私は科学部に所属している。", e:"belong to A。進行形にはしない（I am belonging は誤り）。"},
-{u:"基礎", d:1, q:"nervous", p:"形", c:["緊張して","落ち着いて","退屈して","満足して"], a:"緊張して", x:"I get nervous before speaking in public.", xj:"人前で話す前は緊張する。", e:"be nervous about A。名詞 nerve（神経）。"},
-{u:"基礎", d:2, q:"rare", p:"形", c:["まれな","よくある","生の","公平な"], a:"まれな", x:"It is rare to see snow in this area.", xj:"この地域で雪を見るのはまれだ。", e:"副詞 rarely（めったに～ない）は否定の意味なので注意。"},
-
-/* ============ 標準 ============ */
-{u:"標準", d:1, q:"appropriate", p:"形", c:["適切な","不十分な","偶然の","永久の"], a:"適切な", x:"Choose an appropriate word for each blank.", xj:"それぞれの空所に適切な語を選びなさい。", e:"設問の指示文で頻出。反意語は inappropriate。"},
-{u:"標準", d:1, q:"significant", p:"形", c:["重要な・かなりの","ささいな","一時的な","伝統的な"], a:"重要な・かなりの", x:"There was a significant increase in online shopping.", xj:"オンライン購入が大幅に増加した。", e:"「意味のある」→「無視できないほど大きい」。副詞 significantly も頻出。"},
-{u:"標準", d:1, q:"consider", p:"動", c:["よく考える・～とみなす","無視する","証明する","交換する"], a:"よく考える・～とみなす", x:"We are considering moving to a larger house.", xj:"私たちはもっと広い家に引っ越すことを検討している。", e:"あとに動詞が続くときは -ing。consider A (to be) B で「AをBとみなす」。"},
-{u:"標準", d:1, q:"encourage", p:"動", c:["励ます・促す","禁じる","批判する","延期する"], a:"励ます・促す", x:"Teachers encourage students to ask questions.", xj:"先生は生徒に質問するよう促す。", e:"encourage 人 to do。反意語は discourage 人 from doing。"},
-{u:"標準", d:1, q:"identify", p:"動", c:["特定する","模倣する","省略する","延長する"], a:"特定する", x:"Researchers identified the cause of the problem.", xj:"研究者たちは問題の原因を特定した。", e:"identify A as B（AをBだと確認する）。名詞 identity（正体）。"},
-{u:"標準", d:1, q:"contribute", p:"動", c:["貢献する・寄付する","妨害する","分配する","競争する"], a:"貢献する・寄付する", x:"Volunteers contributed to the success of the event.", xj:"ボランティアがイベントの成功に貢献した。", e:"contribute to A。名詞は contribution。"},
-{u:"標準", d:1, q:"estimate", p:"動・名", c:["見積もる・見積もり","保証する・保証","訂正する・訂正","招待する・招待"], a:"見積もる・見積もり", x:"Experts estimate that the population will double.", xj:"専門家は人口が倍になると見積もっている。", e:"it is estimated that ... の形も頻出。図表問題の説明文で出る。"},
-{u:"標準", d:1, q:"measure", p:"動・名", c:["測る・対策","作る・材料","選ぶ・選択","隠す・秘密"], a:"測る・対策", x:"They measured the temperature every hour.", xj:"彼らは1時間ごとに気温を測った。", e:"名詞の複数形 measures は「対策」。take measures（対策を取る）。"},
-{u:"標準", d:1, q:"represent", p:"動", c:["表す・代表する","繰り返す","抑制する","修理する"], a:"表す・代表する", x:"Each color represents a different age group.", xj:"それぞれの色が異なる年齢層を表している。", e:"図表の凡例説明で頻出。名詞は representative（代表者）。"},
-{u:"標準", d:1, q:"conduct", p:"動", c:["行う・実施する","中止する","導入する","公表する"], a:"行う・実施する", x:"The team conducted a survey of 300 students.", xj:"そのチームは300人の生徒を対象に調査を行った。", e:"conduct a survey / an experiment。名詞では「行動」。"},
-{u:"標準", d:1, q:"apply to", p:"熟", c:["～に当てはまる","～を思い出す","～を延期する","～に反対する"], a:"～に当てはまる", x:"This rule does not apply to first-year students.", xj:"この規則は1年生には当てはまらない。", e:"apply for A（Aに申し込む）と区別する。"},
-{u:"標準", d:1, q:"recognize", p:"動", c:["それとわかる・認める","無視する","否定する","記録する"], a:"それとわかる・認める", x:"I didn't recognize him with his new haircut.", xj:"髪型が変わっていて彼だとわからなかった。", e:"名詞は recognition。「（功績を）認める」の意味も頻出。"},
-{u:"標準", d:1, q:"remain", p:"動", c:["～のままである・残る","去る","変わる","始まる"], a:"～のままである・残る", x:"The cause of the accident remains unknown.", xj:"事故の原因はいまだに不明のままだ。", e:"remain ＋ 形容詞。stay と同じ使い方。名詞 remains は「残り物・遺跡」。"},
-{u:"標準", d:1, q:"affect", p:"動", c:["影響を与える","模倣する","比較する","中断する"], a:"影響を与える", x:"Lack of sleep affects your concentration.", xj:"睡眠不足は集中力に影響する。", e:"動詞は affect、名詞は effect。品詞で覚え分ける。"},
-{u:"標準", d:1, q:"reflect", p:"動", c:["反映する・よく考える","拒否する","分解する","加速する"], a:"反映する・よく考える", x:"The results reflect the students' real opinions.", xj:"その結果は生徒の本当の意見を反映している。", e:"reflect on A（Aをじっくり考える）。名詞は reflection。"},
-{u:"標準", d:1, q:"assume", p:"動", c:["当然と思う・想定する","証明する","疑う","延期する"], a:"当然と思う・想定する", x:"Don't assume that everyone knows the rules.", xj:"全員が規則を知っていると決めつけてはいけない。", e:"名詞は assumption（想定）。根拠なしに前提とすること。"},
-{u:"標準", d:1, q:"express", p:"動", c:["表現する","抑える","翻訳する","省略する"], a:"表現する", x:"It is hard to express my feelings in English.", xj:"英語で気持ちを表現するのは難しい。", e:"名詞は expression（表現・表情）。"},
-{u:"標準", d:1, q:"survive", p:"動", c:["生き延びる","絶滅する","逃げ出す","移住する"], a:"生き延びる", x:"These creatures can survive without water for years.", xj:"これらの生き物は何年も水なしで生き延びられる。", e:"他動詞で survive the accident（事故を生き延びる）とも使う。名詞 survival。"},
-{u:"標準", d:1, q:"replace", p:"動", c:["取り替える","修理する","返却する","延長する"], a:"取り替える", x:"We replaced the old machine with a new one.", xj:"私たちは古い機械を新しいものに取り替えた。", e:"replace A with B。名詞は replacement。"},
-{u:"標準", d:1, q:"reserve", p:"動", c:["予約する・取っておく","解約する","分配する","放棄する"], a:"予約する・取っておく", x:"You need to reserve a seat in advance.", xj:"事前に席を予約する必要がある。", e:"名詞は reservation（予約）。案内文で頻出。"},
-{u:"標準", d:1, q:"exchange", p:"動・名", c:["交換する・交換","購入する・購入","返却する・返却","放置する・放置"], a:"交換する・交換", x:"They exchanged email addresses at the meeting.", xj:"彼らは会でメールアドレスを交換した。", e:"exchange A for B。exchange student（交換留学生）。"},
-{u:"標準", d:1, q:"register", p:"動", c:["登録する","解散する","省略する","中止する"], a:"登録する", x:"Please register online by May 20.", xj:"5月20日までにオンラインで登録してください。", e:"名詞は registration（登録）。申込案内で頻出。"},
-{u:"標準", d:1, q:"donate", p:"動", c:["寄付する","借りる","販売する","処分する"], a:"寄付する", x:"The club donated the money to a local charity.", xj:"その部は集めたお金を地元の慈善団体に寄付した。", e:"donate A to B。名詞は donation。"},
-{u:"標準", d:1, q:"attract", p:"動", c:["引きつける","遠ざける","失望させる","説得する"], a:"引きつける", x:"The festival attracts visitors from all over Japan.", xj:"その祭りは日本中から訪問者を引きつける。", e:"形容詞 attractive（魅力的な）。名詞 attraction。"},
-{u:"標準", d:1, q:"impact", p:"名", c:["影響","印象","衝動","予算"], a:"影響", x:"Social media has a strong impact on young people.", xj:"SNSは若者に強い影響を与えている。", e:"have an impact on A。influence / effect と同義。"},
-{u:"標準", d:1, q:"factor", p:"名", c:["要因","工場","事実","割合"], a:"要因", x:"Cost is an important factor in choosing a school.", xj:"費用は学校を選ぶうえで重要な要因だ。", e:"factory（工場）と混同しやすい。因果関係の説明で頻出。"},
-{u:"標準", d:1, q:"aspect", p:"名", c:["側面","期待","事故","態度"], a:"側面", x:"We looked at several aspects of the problem.", xj:"私たちはその問題のいくつかの側面を検討した。", e:"「見え方・一面」。論説文で「～の面では」と話題を区切るときに出る。"},
-{u:"標準", d:1, q:"tendency", p:"名", c:["傾向","才能","出席","賃貸"], a:"傾向", x:"There is a tendency for prices to rise in summer.", xj:"夏には価格が上がる傾向がある。", e:"動詞は tend to do。図表の「全体の傾向」を述べるときの定番。"},
-{u:"標準", d:1, q:"advantage", p:"名", c:["利点","欠点","冒険","広告"], a:"利点", x:"One advantage of this plan is its low cost.", xj:"この計画の利点の一つは費用が安いことだ。", e:"反意語 disadvantage。take advantage of A（Aを利用する）。"},
-{u:"標準", d:1, q:"process", p:"名", c:["過程","進歩","職業","財産"], a:"過程", x:"Learning a language is a slow process.", xj:"言語の習得はゆっくりとした過程だ。", e:"in the process of doing（～する過程で）。progress（進歩）と区別。"},
-{u:"標準", d:1, q:"strategy", p:"名", c:["戦略","地層","構造","統計"], a:"戦略", x:"We need a new strategy to attract more members.", xj:"もっと会員を増やすには新しい戦略が必要だ。", e:"形容詞は strategic。学習法の文章で「学習方略」の意味でも出る。"},
-{u:"標準", d:1, q:"population", p:"名", c:["人口","人気","汚染","場所"], a:"人口", x:"The population of the town has decreased since 2000.", xj:"その町の人口は2000年以降減少している。", e:"popular（人気のある）や pollution（汚染）と混同しない。"},
-{u:"標準", d:1, q:"technique", p:"名", c:["技術・手法","技術者","道具","理論"], a:"技術・手法", x:"He learned a new technique for memorizing words.", xj:"彼は単語を覚える新しい手法を身につけた。", e:"technology（科学技術）とは別語。個別の「やり方」を指す。"},
-{u:"標準", d:1, q:"device", p:"名", c:["装置・機器","助言","分割","目的"], a:"装置・機器", x:"You can connect up to three devices at once.", xj:"一度に3台まで機器を接続できる。", e:"advice（助言）と発音・つづりが似ているので注意。"},
-{u:"標準", d:1, q:"equipment", p:"名", c:["設備・器具","備え付けの家具","従業員","条件"], a:"設備・器具", x:"All the equipment is provided by the school.", xj:"用具はすべて学校が用意する。", e:"数えられない名詞。a piece of equipment と数える。"},
-{u:"標準", d:1, q:"material", p:"名", c:["材料・資料","装置","方法","記録"], a:"材料・資料", x:"Please bring your own materials to the workshop.", xj:"講習会には自分の資料を持ってきてください。", e:"「教材」の意味でも出る。形容詞では「物質的な」。"},
-{u:"標準", d:1, q:"condition", p:"名", c:["状態・条件","結論","伝統","地位"], a:"状態・条件", x:"The books are in good condition.", xj:"その本は状態がよい。", e:"複数形 conditions は「状況・環境」。on condition that ...（～という条件で）。"},
-{u:"標準", d:1, q:"quality", p:"名", c:["質","量","数量","平等"], a:"質", x:"They focus on quality rather than quantity.", xj:"彼らは量より質を重視している。", e:"quantity（量）と対にして覚える。「（人の）資質」の意味も。"},
-{u:"標準", d:1, q:"variety", p:"名", c:["多様性・種類","確実性","不足","単調さ"], a:"多様性・種類", x:"The shop sells a wide variety of teas.", xj:"その店は幅広い種類の紅茶を売っている。", e:"a variety of A ＝ various A。形容詞は various。"},
-{u:"標準", d:1, q:"opinion", p:"名", c:["意見","事実","証拠","経験"], a:"意見", x:"In my opinion, the second plan is better.", xj:"私の意見では、2つ目の計画のほうがよい。", e:"in my opinion（私の考えでは）。fact（事実）と対比して問われる。"},
-{u:"標準", d:1, q:"attitude", p:"名", c:["態度・考え方","高度","適性","習慣"], a:"態度・考え方", x:"Her attitude toward work changed completely.", xj:"仕事に対する彼女の態度はすっかり変わった。", e:"attitude toward / to A。altitude（高度）と混同しない。"},
-{u:"標準", d:1, q:"expression", p:"名", c:["表現・表情","印象","抑圧","期待"], a:"表現・表情", x:"I noticed a worried expression on his face.", xj:"私は彼の顔に不安そうな表情を認めた。", e:"facial expression（表情）。動詞は express。"},
-{u:"標準", d:1, q:"behavior", p:"名", c:["ふるまい・行動","信念","利益","背景"], a:"ふるまい・行動", x:"The study looked at the behavior of young children.", xj:"その研究は幼い子どもの行動を調べた。", e:"イギリス式つづりは behaviour。動詞は behave。"},
-{u:"標準", d:1, q:"background", p:"名", c:["背景・経歴","前景","結論","見通し"], a:"背景・経歴", x:"Students come from many different backgrounds.", xj:"生徒たちはさまざまな異なる背景から来ている。", e:"「生い立ち・出身」の意味で長文に出る。"},
-{u:"標準", d:1, q:"souvenir", p:"名", c:["おみやげ","記念写真","案内書","割引券"], a:"おみやげ", x:"I bought a souvenir for my host family.", xj:"私はホストファミリーにおみやげを買った。", e:"フランス語由来。旅行を扱う会話文・案内文で出る。"},
-{u:"標準", d:1, q:"exhibition", p:"名", c:["展示会","競技会","講演会","説明会"], a:"展示会", x:"The art exhibition runs until the end of May.", xj:"その美術展は5月末まで開かれている。", e:"動詞は exhibit（展示する）。案内文・掲示で頻出。"},
-{u:"標準", d:1, q:"application", p:"名", c:["申し込み・応用","賞賛","装置","感謝"], a:"申し込み・応用", x:"The application deadline is June 30.", xj:"申込締切は6月30日です。", e:"動詞 apply から。application form（申込用紙）。"},
-{u:"標準", d:1, q:"deadline", p:"名", c:["締め切り","始業時刻","最終行","休止期間"], a:"締め切り", x:"Don't miss the deadline for the report.", xj:"レポートの締め切りに遅れないように。", e:"meet the deadline（締め切りに間に合う）。案内文で頻出。"},
-{u:"標準", d:1, q:"instruction", p:"名", c:["指示・説明書","建設","導入","中断"], a:"指示・説明書", x:"Read the instructions before using the machine.", xj:"機械を使う前に説明書を読みなさい。", e:"複数形で使うことが多い。動詞は instruct。"},
-{u:"標準", d:1, q:"regular", p:"形", c:["定期的な・通常の","不規則な","特別な","一時的な"], a:"定期的な・通常の", x:"Regular exercise improves your sleep.", xj:"定期的な運動は睡眠を改善する。", e:"副詞 regularly（定期的に）。反意語は irregular。"},
-{u:"標準", d:1, q:"previous", p:"形", c:["前の","次の","現在の","最終の"], a:"前の", x:"Compared with the previous year, sales doubled.", xj:"前年と比べて売上は倍になった。", e:"副詞 previously（以前は）。図表の比較で頻出。"},
-{u:"標準", d:1, q:"effective", p:"形", c:["効果的な","無効な","高価な","一時的な"], a:"効果的な", x:"This method is simple but effective.", xj:"この方法は単純だが効果的だ。", e:"名詞は effect。副詞 effectively も頻出。"},
-{u:"標準", d:1, q:"efficient", p:"形", c:["効率のよい","無駄の多い","十分な","不確かな"], a:"効率のよい", x:"Buses are a more efficient way to move large groups.", xj:"バスは大人数を運ぶより効率的な手段だ。", e:"effective（効果がある）との違いに注意。名詞は efficiency。"},
-{u:"標準", d:1, q:"flexible", p:"形", c:["柔軟な","堅苦しい","壊れやすい","高価な"], a:"柔軟な", x:"The schedule is flexible, so you can join anytime.", xj:"日程は柔軟なので、いつでも参加できる。", e:"名詞は flexibility。案内文の「都合に合わせられる」で出る。"},
-{u:"標準", d:1, q:"specific", p:"形", c:["具体的な・特定の","一般的な","あいまいな","偶然の"], a:"具体的な・特定の", x:"Give a specific example to support your idea.", xj:"自分の考えを支える具体例を挙げなさい。", e:"副詞 specifically（具体的には）。general の反対。"},
-{u:"標準", d:1, q:"complex", p:"形", c:["複雑な","単純な","完全な","類似の"], a:"複雑な", x:"The rules of the game are quite complex.", xj:"その競技の規則はかなり複雑だ。", e:"complicated とほぼ同義。名詞は complexity。"},
-{u:"標準", d:1, q:"unique", p:"形", c:["独特の","平凡な","公平な","不安定な"], a:"独特の", x:"Each region has its own unique culture.", xj:"それぞれの地域が独自の文化をもっている。", e:"be unique to A（Aに特有だ）。more unique とは普通言わない。"},
-{u:"標準", d:1, q:"negative", p:"形", c:["否定的な","肯定的な","中立の","相対的な"], a:"否定的な", x:"The article takes a negative view of the plan.", xj:"その記事はその計画に否定的な見方をしている。", e:"positive と対で覚える。筆者の立場を問う設問で決め手になる。"},
-{u:"標準", d:1, q:"positive", p:"形", c:["肯定的な・前向きな","否定的な","消極的な","中立の"], a:"肯定的な・前向きな", x:"Most responses to the new menu were positive.", xj:"新しいメニューへの反応はほとんどが好意的だった。", e:"「確信している」の意味もある。negative と対で覚える。"},
-{u:"標準", d:1, q:"aware", p:"形", c:["気づいて","無関心で","不安で","満足して"], a:"気づいて", x:"Many people are not aware of the risk.", xj:"多くの人がその危険に気づいていない。", e:"be aware of A / that ...。名詞は awareness（意識）。"},
-{u:"標準", d:1, q:"confident", p:"形", c:["自信のある","不安な","無関心な","懐疑的な"], a:"自信のある", x:"She felt more confident after practicing.", xj:"練習のあと彼女はより自信をもった。", e:"be confident of / about A。名詞は confidence。"},
-{u:"標準", d:1, q:"willing", p:"形", c:["進んで～する","いやがる","有能な","不可能な"], a:"進んで～する", x:"Several students were willing to help.", xj:"何人かの生徒が進んで手伝ってくれた。", e:"be willing to do。反意語は unwilling / reluctant。"},
-{u:"標準", d:1, q:"reluctant", p:"形", c:["気が進まない","熱心な","無関心な","慎重な"], a:"気が進まない", x:"He was reluctant to speak in front of the class.", xj:"彼はクラスの前で話すのを嫌がった。", e:"be reluctant to do。willing の反対として覚える。"},
-{u:"標準", d:1, q:"accurate", p:"形", c:["正確な","おおまかな","手ごろな","時代遅れの"], a:"正確な", x:"The weather forecast was surprisingly accurate.", xj:"天気予報は驚くほど正確だった。", e:"名詞は accuracy。反意語は inaccurate。"},
-{u:"標準", d:1, q:"familiar", p:"形", c:["よく知っている","初対面の","高価な","不十分な"], a:"よく知っている", x:"I'm not familiar with this app.", xj:"私はこのアプリをよく知らない。", e:"人 be familiar with 物／物 be familiar to 人。向きに注意。"},
-{u:"標準", d:1, q:"limited", p:"形", c:["限られた","無制限の","高価な","一般的な"], a:"限られた", x:"Seats are limited, so apply early.", xj:"席には限りがあるので早めに申し込んでください。", e:"limited number of A。案内文の常套句。動詞は limit。"},
-{u:"標準", d:1, q:"additional", p:"形", c:["追加の","不足の","従来の","代替の"], a:"追加の", x:"There is no additional charge for children.", xj:"子どもには追加料金はかかりません。", e:"名詞は addition。料金表・案内文で頻出。"},
-{u:"標準", d:1, q:"annual", p:"形", c:["年1回の","月1回の","毎日の","隔週の"], a:"年1回の", x:"The school holds an annual sports festival.", xj:"その学校は年に1度体育祭を開く。", e:"副詞 annually（毎年）。monthly / weekly と並べて覚える。"},
-{u:"標準", d:1, q:"frequently", p:"副", c:["頻繁に","めったに～ない","即座に","徐々に"], a:"頻繁に", x:"This word is frequently used in academic writing.", xj:"この語は学術的な文章で頻繁に使われる。", e:"形容詞 frequent、名詞 frequency（頻度）。"},
-{u:"標準", d:1, q:"approximately", p:"副", c:["およそ","正確に","ほとんど～ない","徐々に"], a:"およそ", x:"The trip takes approximately two hours.", xj:"その移動はおよそ2時間かかる。", e:"about の硬い語。図表・案内文の数値説明で頻出。"},
-{u:"標準", d:1, q:"eventually", p:"副", c:["最終的に","もしかすると","即座に","一時的に"], a:"最終的に", x:"After many attempts, he eventually succeeded.", xj:"何度も試したのち、彼はついに成功した。", e:"「いずれは」。possibly（ひょっとして）の意味はない。"},
-{u:"標準", d:1, q:"nevertheless", p:"副", c:["それにもかかわらず","そのうえ","したがって","たとえば"], a:"それにもかかわらず", x:"The task was hard; nevertheless, they finished it.", xj:"その作業は大変だったが、それでも彼らはやり遂げた。", e:"however より硬い逆接。論説文で筆者の転換点になる。"},
-{u:"標準", d:1, q:"otherwise", p:"副", c:["さもなければ","そのうえ","同様に","たとえば"], a:"さもなければ", x:"Leave now; otherwise you will miss the bus.", xj:"今出発しなさい。さもないとバスに乗り遅れます。", e:"「別のやり方で」の意味もある。命令文とセットで頻出。"},
-{u:"標準", d:2, q:"sufficient", p:"形", c:["十分な","過剰な","一時的な","公式の"], a:"十分な", x:"We do not have sufficient evidence to prove it.", xj:"それを証明する十分な証拠がない。", e:"enough の硬い語。反意語は insufficient。"},
-{u:"標準", d:2, q:"apparently", p:"副", c:["どうやら～らしい","明らかに間違って","意図的に","徐々に"], a:"どうやら～らしい", x:"Apparently, the concert has been canceled.", xj:"どうやらコンサートは中止になったらしい。", e:"「見たところ～らしい（断定はしない）」。clearly と取り違えない。"},
-{u:"標準", d:2, q:"constant", p:"形", c:["絶え間ない・一定の","まれな","急激な","部分的な"], a:"絶え間ない・一定の", x:"The machine makes a constant noise.", xj:"その機械は絶え間なく音を立てる。", e:"副詞 constantly（絶えず）。「変化しない」の意味も。"},
-{u:"標準", d:2, q:"regardless of", p:"熟", c:["～に関係なく","～のおかげで","～に応じて","～に先立って"], a:"～に関係なく", x:"Anyone can join, regardless of age.", xj:"年齢に関係なく誰でも参加できる。", e:"案内文の参加条件でよく出る。in spite of と区別。"},
-{u:"標準", d:2, q:"in terms of", p:"熟", c:["～の観点から","～の代わりに","～に加えて","～に反して"], a:"～の観点から", x:"In terms of cost, the first plan is better.", xj:"費用の観点では最初の計画のほうがよい。", e:"論点を限定する表現。論説文・発表原稿で頻出。"},
-{u:"標準", d:2, q:"be supposed to", p:"熟", c:["～することになっている","～するはずがない","～し終えている","～に慣れている"], a:"～することになっている", x:"We are supposed to meet at the station at nine.", xj:"私たちは9時に駅で会うことになっている。", e:"「本来はそうすべき」という含み。過去形だと「実際はしなかった」。"},
-{u:"標準", d:2, q:"result in", p:"熟", c:["～という結果になる","～が原因である","～を思いつく","～を取り消す"], a:"～という結果になる", x:"The heavy rain resulted in the cancellation of the game.", xj:"大雨は試合の中止という結果を招いた。", e:"result from A なら「Aが原因で起こる」。向きが逆。"},
-{u:"標準", d:2, q:"come up with", p:"熟", c:["～を思いつく","～に追いつく","～を我慢する","～を取り消す"], a:"～を思いつく", x:"She came up with a great idea for the poster.", xj:"彼女はポスターのすばらしい案を思いついた。", e:"catch up with（追いつく）と混同しやすい。"},
-{u:"標準", d:2, q:"be concerned about", p:"熟", c:["～を心配している","～に関係がある","～に満足している","～に慣れている"], a:"～を心配している", x:"Parents are concerned about screen time.", xj:"親は画面を見る時間を心配している。", e:"be concerned with A なら「Aに関係がある」。前置詞で意味が変わる。"},
-
-{u:"標準", d:1, q:"appreciate", p:"動", c:["感謝する・よさがわかる","批判する","無視する","誇張する"], a:"感謝する・よさがわかる", x:"I really appreciate your help.", xj:"手伝ってくれて本当に感謝しています。", e:"「価値がわかる」が原義。thank より丁寧な感謝表現。"},
-{u:"標準", d:1, q:"assist", p:"動", c:["手伝う","妨げる","任せる","監督する"], a:"手伝う", x:"Staff members will assist you at the entrance.", xj:"入口では係員がお手伝いします。", e:"assist 人 with A。名詞は assistance / assistant。"},
-{u:"標準", d:1, q:"awareness", p:"名", c:["意識・認識","無関心","警告","広告"], a:"意識・認識", x:"The campaign raised awareness of food waste.", xj:"その運動は食品ロスへの意識を高めた。", e:"raise awareness of A（Aへの意識を高める）。形容詞は aware。"},
-{u:"標準", d:1, q:"capable", p:"形", c:["能力がある","無力な","不注意な","気まぐれな"], a:"能力がある", x:"She is capable of solving difficult problems.", xj:"彼女は難しい問題を解く力がある。", e:"be capable of doing。名詞は capability。able は be able to do。"},
-{u:"標準", d:1, q:"concentrate", p:"動", c:["集中する","分散する","休憩する","延期する"], a:"集中する", x:"It's hard to concentrate in a noisy room.", xj:"うるさい部屋では集中しにくい。", e:"concentrate on A。名詞は concentration（集中力）。"},
-{u:"標準", d:1, q:"confirm", p:"動", c:["確認する","否定する","延期する","翻訳する"], a:"確認する", x:"Please confirm your reservation by email.", xj:"予約はメールでご確認ください。", e:"名詞は confirmation（確認・確認書）。案内文で頻出。"},
-{u:"標準", d:1, q:"consequence", p:"名", c:["（結果として起こる）影響","原因","過程","例外"], a:"（結果として起こる）影響", x:"He did not think about the consequences of his actions.", xj:"彼は自分の行動の結果を考えなかった。", e:"as a consequence（その結果）。result（結果）より「行いの報い」に近い。"},
-{u:"標準", d:1, q:"consistent", p:"形", c:["一貫した","矛盾した","一時的な","偶発的な"], a:"一貫した", x:"His answers were consistent with the data.", xj:"彼の答えはデータと一致していた。", e:"be consistent with A（Aと矛盾しない）。名詞は consistency。"},
-{u:"標準", d:1, q:"convince", p:"動", c:["納得させる","失望させる","混乱させる","無視する"], a:"納得させる", x:"He convinced me to join the club.", xj:"彼は私を説得して部に入らせた。", e:"be convinced that ...（～だと確信している）。形容詞 convincing（説得力のある）。"},
-{u:"標準", d:1, q:"decrease", p:"動・名", c:["減少する・減少","増加する・増加","維持する・維持","変動する・変動"], a:"減少する・減少", x:"The number of newspapers sold has decreased sharply.", xj:"売れる新聞の部数は急激に減少している。", e:"decrease by 10%（10%減る）／decrease to 50（50まで減る）。by と to の違いに注意。"},
-{u:"標準", d:1, q:"determine", p:"動", c:["決定する・突き止める","延期する","依頼する","誇張する"], a:"決定する・突き止める", x:"The test will determine your final grade.", xj:"そのテストが最終評価を決める。", e:"be determined to do（～しようと決意している）。名詞 determination。"},
-{u:"標準", d:1, q:"ensure", p:"動", c:["確実にする","保険をかける","疑う","延期する"], a:"確実にする", x:"Check the list to ensure that nothing is missing.", xj:"何も欠けていないことを確かめるためリストを確認しなさい。", e:"insure（保険をかける）と混同しやすい。make sure と同義。"},
-{u:"標準", d:1, q:"entire", p:"形", c:["全体の","部分的な","主要な","わずかな"], a:"全体の", x:"The entire class took part in the cleanup.", xj:"クラス全体が清掃活動に参加した。", e:"whole とほぼ同義。副詞 entirely（完全に）。"},
-{u:"標準", d:1, q:"essential", p:"形", c:["不可欠な","任意の","一時的な","装飾的な"], a:"不可欠な", x:"Water is essential for all living things.", xj:"水はすべての生き物にとって不可欠だ。", e:"be essential for / to A。necessary より強い。"},
-{u:"標準", d:1, q:"establish", p:"動", c:["設立する・確立する","解散する","模倣する","延期する"], a:"設立する・確立する", x:"The club was established in 1985.", xj:"その部は1985年に設立された。", e:"名詞は establishment。「（関係・評判を）築く」でも使う。"},
-{u:"標準", d:1, q:"examine", p:"動", c:["調べる","無視する","出版する","交換する"], a:"調べる", x:"Researchers examined the effects of exercise on sleep.", xj:"研究者たちは運動が睡眠に与える影響を調べた。", e:"名詞は examination（検査・試験）。研究の紹介で頻出。"},
-{u:"標準", d:1, q:"expand", p:"動", c:["拡大する","縮小する","分解する","停止する"], a:"拡大する", x:"The company expanded its business into Asia.", xj:"その会社はアジアに事業を拡大した。", e:"名詞は expansion。反意語は shrink / contract。"},
-{u:"標準", d:1, q:"focus on", p:"熟", c:["～に重点を置く","～を見落とす","～を延期する","～に反対する"], a:"～に重点を置く", x:"This lesson focuses on listening skills.", xj:"この授業は聞く力に重点を置いている。", e:"名詞 focus は「焦点」。the focus of A。"},
-{u:"標準", d:1, q:"generation", p:"名", c:["世代","発生源","一般化","寛大さ"], a:"世代", x:"Older generations use social media differently.", xj:"上の世代はSNSの使い方が違う。", e:"「発電」の意味もある。動詞は generate。"},
-{u:"標準", d:1, q:"ignore", p:"動", c:["無視する","強調する","認識する","調査する"], a:"無視する", x:"You should not ignore small warning signs.", xj:"小さな危険信号を無視してはいけない。", e:"形容詞 ignorant（無知な）とは意味がずれるので注意。"},
-{u:"標準", d:1, q:"individual", p:"名・形", c:["個人・個々の","団体・集団の","平均・平均的な","例外・例外的な"], a:"個人・個々の", x:"Each individual has a different learning style.", xj:"人はそれぞれ違う学び方をもっている。", e:"副詞 individually（個別に）。group と対で使われる。"},
-{u:"標準", d:1, q:"influence", p:"名・動", c:["影響・影響を与える","流入・流れ込む","流行・流行する","洪水・あふれる"], a:"影響・影響を与える", x:"Her teacher had a great influence on her career.", xj:"彼女の先生は彼女の進路に大きな影響を与えた。", e:"have an influence on A。形容詞 influential（影響力のある）。"},
-{u:"標準", d:1, q:"intend", p:"動", c:["意図する","偶然そうなる","禁じる","延期する"], a:"意図する", x:"This book is intended for beginners.", xj:"この本は初心者向けに作られている。", e:"be intended for A（A向けである）。名詞は intention。"},
-{u:"標準", d:1, q:"involve", p:"動", c:["巻き込む・伴う","除外する","解決する","短縮する"], a:"巻き込む・伴う", x:"The job involves working with children.", xj:"その仕事は子どもと関わることを含む。", e:"be involved in A（Aに関わっている）。"},
-{u:"標準", d:1, q:"issue", p:"名・動", c:["問題・発行する","結論・要約する","保証・保証する","装置・装備する"], a:"問題・発行する", x:"Climate change is a global issue.", xj:"気候変動は世界的な問題だ。", e:"problem より「議論すべき論点」に近い。「（雑誌の）号」の意味も。"},
-{u:"標準", d:1, q:"obvious", p:"形", c:["明らかな","あいまいな","複雑な","一時的な"], a:"明らかな", x:"It was obvious that he had not practiced.", xj:"彼が練習していないのは明らかだった。", e:"副詞 obviously（明らかに）。clear の硬い語。"},
-{u:"標準", d:1, q:"occur", p:"動", c:["起こる","消える","集まる","延期する"], a:"起こる", x:"The accident occurred late at night.", xj:"その事故は夜遅くに起こった。", e:"名詞は occurrence。it occurs to 人 that ...（～と思いつく）も頻出。"},
-{u:"標準", d:1, q:"organize", p:"動", c:["準備する・整理する","散らかす","延期する","模倣する"], a:"準備する・整理する", x:"The students organized a charity concert.", xj:"生徒たちは慈善コンサートを企画した。", e:"名詞 organization（組織・運営）。イベント案内で頻出。"},
-{u:"標準", d:1, q:"potential", p:"名・形", c:["可能性・潜在的な","義務・義務的な","限界・限定的な","結論・決定的な"], a:"可能性・潜在的な", x:"The plan has the potential to save money.", xj:"その計画には経費を節約できる可能性がある。", e:"potential risk（潜在的な危険）。副詞 potentially。"},
-{u:"標準", d:1, q:"prefer", p:"動", c:["～のほうを好む","～を我慢する","～を延期する","～を提供する"], a:"～のほうを好む", x:"I prefer tea to coffee.", xj:"私はコーヒーより紅茶のほうが好きだ。", e:"prefer A to B（than ではない）。prefer to do rather than do。"},
-{u:"標準", d:1, q:"principle", p:"名", c:["原則","校長","王子","印刷"], a:"原則", x:"The design follows a simple principle.", xj:"そのデザインは単純な原則に従っている。", e:"principal（主要な・校長）と同音。つづりで区別する。"},
-{u:"標準", d:1, q:"promote", p:"動", c:["促進する・宣伝する","抑制する","延期する","分解する"], a:"促進する・宣伝する", x:"The city promotes cycling as a green option.", xj:"市は環境にやさしい選択肢として自転車を推進している。", e:"「昇進させる」の意味も。名詞は promotion。"},
-{u:"標準", d:1, q:"purchase", p:"動・名", c:["購入する・購入","返品する・返品","追求する・追求","保管する・保管"], a:"購入する・購入", x:"Tickets purchased online are cheaper.", xj:"オンラインで購入したチケットのほうが安い。", e:"buy の硬い語。案内文・広告文で頻出。"},
-{u:"標準", d:1, q:"range", p:"名・動", c:["範囲・及ぶ","順位・並ぶ","牧場・放牧する","距離・離れる"], a:"範囲・及ぶ", x:"Prices range from 500 to 2,000 yen.", xj:"価格は500円から2,000円までにわたる。", e:"range from A to B。a wide range of A（幅広い～）。"},
-{u:"標準", d:1, q:"refer to", p:"熟", c:["～に言及する・～を参照する","～を避ける","～を訂正する","～に返信する"], a:"～に言及する・～を参照する", x:"Refer to page 12 for more details.", xj:"詳細は12ページを参照してください。", e:"名詞 reference。「～を指す」の意味も長文で重要。"},
-{u:"標準", d:1, q:"relate", p:"動", c:["関連づける","分離する","記録する","繰り返す"], a:"関連づける", x:"The article relates diet to mental health.", xj:"その記事は食事と心の健康を結びつけている。", e:"be related to A（Aと関係がある）。名詞は relation / relationship。"},
-{u:"標準", d:1, q:"rely on", p:"熟", c:["～に頼る","～を軽んじる","～に返信する","～を繰り返す"], a:"～に頼る", x:"Many students rely on their smartphones for information.", xj:"多くの生徒は情報をスマホに頼っている。", e:"depend on と同義。形容詞 reliable（信頼できる）。"},
-{u:"標準", d:1, q:"remind", p:"動", c:["思い出させる","思い出す","忘れさせる","知らせない"], a:"思い出させる", x:"This song reminds me of my childhood.", xj:"この歌を聞くと子どもの頃を思い出す。", e:"remind 人 of A／remind 人 to do。remember（自分が思い出す）と区別。"},
-{u:"標準", d:1, q:"respond", p:"動", c:["反応する・返答する","無視する","要求する","延期する"], a:"反応する・返答する", x:"Only half of the students responded to the survey.", xj:"調査に回答したのは生徒の半数だけだった。", e:"respond to A。名詞は response（回答・反応）。"},
-{u:"標準", d:1, q:"source", p:"名", c:["源・出典","資源","過程","結果"], a:"源・出典", x:"Always check the source of the information.", xj:"情報の出どころを必ず確認しなさい。", e:"resource（資源）と混同しやすい。「原因」の意味でも使う。"},
-{u:"標準", d:1, q:"standard", p:"名・形", c:["基準・標準の","例外・例外的な","記録・記録的な","上限・最大の"], a:"基準・標準の", x:"The product meets international safety standards.", xj:"その製品は国際的な安全基準を満たしている。", e:"meet the standard（基準を満たす）。動詞 standardize（標準化する）。"},
-{u:"標準", d:1, q:"structure", p:"名", c:["構造","彫刻","指示","装置"], a:"構造", x:"Understanding the structure of a passage helps you read faster.", xj:"文章の構造をつかむと速く読める。", e:"形容詞 structural。「建造物」の意味もある。"},
-{u:"標準", d:1, q:"submit", p:"動", c:["提出する","受け取る","却下する","延期する"], a:"提出する", x:"Please submit your report by Friday.", xj:"レポートは金曜日までに提出してください。", e:"名詞は submission。hand in とほぼ同義。"},
-{u:"標準", d:1, q:"sudden", p:"形", c:["突然の","徐々の","定期的な","予定された"], a:"突然の", x:"There was a sudden change in the weather.", xj:"天気が突然変わった。", e:"副詞 suddenly、all of a sudden（突然）。"},
-{u:"標準", d:1, q:"suffer", p:"動", c:["苦しむ","楽しむ","回復する","支配する"], a:"苦しむ", x:"Many people suffer from lack of sleep.", xj:"多くの人が睡眠不足に苦しんでいる。", e:"suffer from A（病気・不足に苦しむ）。他動詞では「（損害を）被る」。"},
-{u:"標準", d:1, q:"supply", p:"動・名", c:["供給する・供給","需要する・需要","消費する・消費","拒否する・拒否"], a:"供給する・供給", x:"The school supplies all the necessary tools.", xj:"学校が必要な道具をすべて用意する。", e:"supply A with B。demand（需要）と対で覚える。"},
-{u:"標準", d:1, q:"temporary", p:"形", c:["一時的な","永続的な","定期的な","伝統的な"], a:"一時的な", x:"This is only a temporary solution.", xj:"これは一時的な解決策にすぎない。", e:"反意語は permanent。副詞 temporarily。"},
-{u:"標準", d:1, q:"threat", p:"名", c:["脅威","治療","傾向","扱い"], a:"脅威", x:"Plastic waste is a serious threat to sea life.", xj:"プラスチックごみは海の生き物にとって深刻な脅威だ。", e:"a threat to A。動詞は threaten。treat（扱う）と混同しない。"},
-{u:"標準", d:1, q:"transfer", p:"動・名", c:["移す・乗り換え","翻訳する・翻訳","変形する・変形","運送する・輸送"], a:"移す・乗り換え", x:"Transfer to the Blue Line at Central Station.", xj:"中央駅で青線に乗り換えてください。", e:"交通案内で頻出。「（データを）転送する」の意味も。"},
-{u:"標準", d:1, q:"trend", p:"名", c:["傾向・流行","例外","記録","割引"], a:"傾向・流行", x:"The graph shows a clear upward trend.", xj:"そのグラフは明らかな上昇傾向を示している。", e:"upward / downward trend は図表問題の定番表現。"},
-{u:"標準", d:1, q:"urban", p:"形", c:["都市の","農村の","国際的な","古代の"], a:"都市の", x:"More people are moving to urban areas.", xj:"より多くの人が都市部へ移り住んでいる。", e:"反意語は rural（農村の）。対で問われることが多い。"},
-{u:"標準", d:1, q:"valuable", p:"形", c:["貴重な","無価値な","高価すぎる","平凡な"], a:"貴重な", x:"The trip was a valuable experience.", xj:"その旅行は貴重な経験だった。", e:"invaluable は「無価値」ではなく「計り知れないほど貴重」。要注意。"},
-{u:"標準", d:1, q:"waste", p:"動・名", c:["無駄にする・廃棄物","節約する・貯蓄","処理する・処理","収集する・収集"], a:"無駄にする・廃棄物", x:"Don't waste time worrying about small things.", xj:"小さなことを心配して時間を無駄にしてはいけない。", e:"food waste（食品ロス）は環境の長文で頻出。"},
-{u:"標準", d:2, q:"whereas", p:"接", c:["～である一方","～するとすぐに","～するために","～する限り"], a:"～である一方", x:"Some students prefer paper books, whereas others prefer e-books.", xj:"紙の本を好む生徒もいれば、電子書籍を好む生徒もいる。", e:"対比を示す接続詞。while とほぼ同義。図表の比較説明で頻出。"},
-{u:"標準", d:2, q:"be worth", p:"熟", c:["～の価値がある","～に値しない","～を必要とする","～に匹敵する"], a:"～の価値がある", x:"This museum is worth visiting.", xj:"この博物館は訪れる価値がある。", e:"be worth doing（to do ではない）。worth の後ろは名詞か動名詞。"},
-{u:"標準", d:2, q:"take advantage of", p:"熟", c:["～を利用する","～を軽んじる","～を先送りする","～に感謝する"], a:"～を利用する", x:"Take advantage of the free trial period.", xj:"無料お試し期間を活用してください。", e:"「（人の弱みに）つけこむ」という悪い意味にもなる。文脈で判断する。"},
-{u:"標準", d:2, q:"as long as", p:"熟", c:["～しさえすれば","～するとすぐに","～する代わりに","～するにつれて"], a:"～しさえすれば", x:"You can borrow it as long as you return it today.", xj:"今日返してくれるなら借りていいですよ。", e:"条件を表す。as far as は「範囲」で意味が違う。"},
-{u:"標準", d:1, q:"explore", p:"動", c:["探検する・詳しく調べる","無視する","放棄する","模倣する"], a:"探検する・詳しく調べる", x:"The team explored several possible solutions.", xj:"そのチームはいくつかの解決策を検討した。", e:"名詞は exploration（探査）。space exploration は2025年本試験のテーマ語。"},
-{u:"標準", d:1, q:"conservation", p:"名", c:["保護・保全","会話","建設","保守点検"], a:"保護・保全", x:"The park is important for wildlife conservation.", xj:"その公園は野生動物の保護にとって重要だ。", e:"動詞 conserve。conversation（会話）とつづりが似ているので注意。"},
-{u:"標準", d:1, q:"cooperation", p:"名", c:["協力","競争","会社","操作"], a:"協力", x:"The event succeeded thanks to everyone's cooperation.", xj:"皆の協力のおかげでイベントは成功した。", e:"動詞 cooperate、形容詞 cooperative。corporation（企業）と混同しない。"},
-{u:"標準", d:1, q:"economic", p:"形", c:["経済の","節約になる","生態系の","電子の"], a:"経済の", x:"The festival brings economic benefits to the town.", xj:"その祭りは町に経済的利益をもたらす。", e:"economical は「安上がりの」で意味が違う。名詞 economy。"},
-{u:"標準", d:1, q:"industry", p:"名", c:["産業・勤勉","業界紙","工業製品","職人"], a:"産業・勤勉", x:"Tourism is a major industry in this region.", xj:"観光はこの地域の主要産業だ。", e:"形容詞 industrial（産業の）／industrious（勤勉な）。両者を取り違えやすい。"},
-{u:"標準", d:1, q:"function", p:"名・動", c:["機能・機能する","式典・催す","破損・壊れる","基礎・支える"], a:"機能・機能する", x:"This app has a useful search function.", xj:"このアプリには便利な検索機能がある。", e:"形容詞 functional。「（正常に）働く」という動詞用法も頻出。"},
-{u:"標準", d:1, q:"argument", p:"名", c:["主張・議論","合意","要約","装置"], a:"主張・議論", x:"His argument was not supported by evidence.", xj:"彼の主張は証拠に裏づけられていなかった。", e:"「口論」の意味もある。動詞は argue。論説文の設問で頻出。"},
-{u:"標準", d:1, q:"transportation", p:"名", c:["交通機関・輸送","翻訳","移植","変形"], a:"交通機関・輸送", x:"Public transportation is cheap in this city.", xj:"この市では公共交通機関が安い。", e:"イギリス英語では transport。案内文・図表問題で頻出。"},
-{u:"標準", d:1, q:"harmful", p:"形", c:["有害な","無害な","調和した","収穫の多い"], a:"有害な", x:"Too much screen time can be harmful to your eyes.", xj:"画面を見すぎるのは目に有害になりうる。", e:"be harmful to A。反意語は harmless。名詞は harm。"},
-{u:"標準", d:1, q:"distance", p:"名", c:["距離","違い","分配","抵抗"], a:"距離", x:"The distance between the two towns is about 30 km.", xj:"その2つの町の距離はおよそ30キロだ。", e:"形容詞 distant（遠い）。in the distance（遠方に）。"},
-{u:"標準", d:1, q:"period", p:"名", c:["期間・時代","終止符の位置","周辺部","定期券"], a:"期間・時代", x:"Tickets are on sale for a limited period.", xj:"チケットは期間限定で発売中です。", e:"「（授業の）時限」の意味も。形容詞 periodic（周期的な）。"},
-
-{u:"標準", d:1, q:"prediction", p:"名", c:["予測","前置き","生産","保護"], a:"予測", x:"His prediction turned out to be correct.", xj:"彼の予測は正しいと分かった。", e:"動詞は predict。pre-（前もって）＋dict（言う）。"},
-{u:"標準", d:1, q:"attempt", p:"名・動", c:["試み・試みる","成功・成し遂げる","放棄・やめる","習慣・慣れる"], a:"試み・試みる", x:"His first attempt to climb the mountain failed.", xj:"山に登ろうという彼の最初の試みは失敗した。", e:"an attempt to do。try の硬い語。"},
-{u:"標準", d:1, q:"failure", p:"名", c:["失敗・故障","成功","公平さ","疲労"], a:"失敗・故障", x:"Failure is part of the learning process.", xj:"失敗は学びの過程の一部だ。", e:"動詞は fail。「（機械の）故障」の意味でも使う。"},
-{u:"標準", d:1, q:"strength", p:"名", c:["強さ・長所","弱さ","長さ","厳しさ"], a:"強さ・長所", x:"Teamwork is one of our strengths.", xj:"チームワークは私たちの長所の一つだ。", e:"形容詞 strong、動詞 strengthen。反意語は weakness。"},
-{u:"標準", d:1, q:"importance", p:"名", c:["重要性","輸入品","忍耐","印象"], a:"重要性", x:"He stressed the importance of daily practice.", xj:"彼は毎日の練習の重要性を強調した。", e:"形容詞 important。import（輸入する）とは別語。"},
-{u:"標準", d:2, q:"impression", p:"名", c:["印象","抑圧","表現","改善"], a:"印象", x:"First impressions are hard to change.", xj:"第一印象は変えにくい。", e:"動詞 impress、形容詞 impressive（印象的な）。"},
-{u:"標準", d:1, q:"reaction", p:"名", c:["反応","作成","休憩","比率"], a:"反応", x:"The reaction to the new menu was positive.", xj:"新しいメニューへの反応は好意的だった。", e:"動詞 react（react to A）。response とほぼ同義。"},
-{u:"標準", d:2, q:"outcome", p:"名", c:["結果・成果","支出","予測","始まり"], a:"結果・成果", x:"Nobody could predict the outcome of the match.", xj:"誰も試合の結果を予測できなかった。", e:"result とほぼ同義。「取り組みの結末」というニュアンス。"},
-{u:"標準", d:1, q:"treatment", p:"名", c:["治療・扱い","条約","脅威","訓練"], a:"治療・扱い", x:"The treatment takes about six weeks.", xj:"その治療はおよそ6週間かかる。", e:"動詞は treat（扱う・治療する・おごる）。"},
-{u:"標準", d:2, q:"theory", p:"名", c:["理論・学説","劇場","療法","傾向"], a:"理論・学説", x:"His theory was later proved wrong.", xj:"彼の学説はのちに誤りだと証明された。", e:"in theory（理論上は）。形容詞 theoretical。"},
-{u:"標準", d:1, q:"surface", p:"名", c:["表面","余剰","供給","調査"], a:"表面", x:"The surface of the leaf is covered with tiny hairs.", xj:"その葉の表面は細かい毛で覆われている。", e:"on the surface（表面上は）。理科系の説明文で頻出。"},
-{u:"標準", d:2, q:"region", p:"名", c:["地域","宗教","規則","記録"], a:"地域", x:"This bird is found only in northern regions.", xj:"この鳥は北の地域にしか見られない。", e:"形容詞 regional（地域の）。religion（宗教）と混同しない。"},
-{u:"標準", d:1, q:"gender", p:"名", c:["性別","世代","寛大さ","一般性"], a:"性別", x:"The survey looked at differences by gender.", xj:"その調査は性別による違いを調べた。", e:"生物学的な sex に対し、社会的・文化的な「性」。図表問題で頻出。"},
-{u:"標準", d:2, q:"gesture", p:"名", c:["身ぶり","姿勢","表情","合図の音"], a:"身ぶり", x:"Gestures can mean different things in different cultures.", xj:"身ぶりは文化によって意味が異なることがある。", e:"異文化理解の長文で頻出。動詞としても使える。"},
-{u:"標準", d:2, q:"household", p:"名", c:["世帯・家庭","家事","持ち家","家具"], a:"世帯・家庭", x:"Most households have at least one smartphone.", xj:"ほとんどの世帯がスマホを1台以上もっている。", e:"household chores（家事）。図表問題の単位として出る。"},
-{u:"標準", d:2, q:"guidance", p:"名", c:["指導・助言","警備","保証","案内板"], a:"指導・助言", x:"Students receive guidance on choosing a career.", xj:"生徒は進路選択について指導を受ける。", e:"動詞は guide。under the guidance of A（Aの指導のもとで）。"},
-{u:"標準", d:2, q:"incident", p:"名", c:["出来事・事件","偶然","付属品","前例"], a:"出来事・事件", x:"The incident was reported in the local paper.", xj:"その出来事は地元紙で報じられた。", e:"accident（事故）よりも中立的で「起きたこと」全般。"},
-{u:"標準", d:1, q:"mental", p:"形", c:["精神の","身体の","金属の","中間の"], a:"精神の", x:"Exercise is good for mental health.", xj:"運動は心の健康によい。", e:"physical（身体の）と対で覚える。名詞は mentality。"},
-{u:"標準", d:2, q:"ordinary", p:"形", c:["普通の","特別な","秩序ある","古風な"], a:"普通の", x:"It was just an ordinary school day.", xj:"それはごく普通の学校の一日だった。", e:"out of the ordinary（普通でない）。extraordinary は「並外れた」。"},
-{u:"標準", d:1, q:"unusual", p:"形", c:["珍しい","いつもの","役に立たない","不安定な"], a:"珍しい", x:"It is unusual to see snow here in April.", xj:"4月にここで雪を見るのは珍しい。", e:"un-＋usual。副詞 unusually（異常に）。"},
-{u:"標準", d:2, q:"visual", p:"形", c:["視覚の","聴覚の","仮想の","重要な"], a:"視覚の", x:"Visual aids make presentations easier to follow.", xj:"視覚資料は発表を分かりやすくする。", e:"副詞 visually。visible（目に見える）と使い分ける。"},
-{u:"標準", d:2, q:"widely", p:"副", c:["広く","わずかに","賢明に","突然"], a:"広く", x:"The custom is widely known in this area.", xj:"その習慣はこの地域で広く知られている。", e:"形容詞 wide。widely used / accepted の形でよく出る。"},
-{u:"標準", d:2, q:"unfortunately", p:"副", c:["残念ながら","幸いにも","当然ながら","意外にも"], a:"残念ながら", x:"Unfortunately, the event was canceled.", xj:"残念ながら、そのイベントは中止になった。", e:"反意語は fortunately。メール文・案内文で頻出。"},
-
-{u:"標準", d:1, q:"emphasize", p:"動", c:["強調する","省略する","否定する","翻訳する"], a:"強調する", x:"The teacher emphasized the importance of reviewing.", xj:"先生は復習の重要性を強調した。", e:"名詞は emphasis。put emphasis on A（Aを重視する）。"},
-{u:"標準", d:1, q:"responsible", p:"形", c:["責任がある","無責任な","反応が早い","尊敬される"], a:"責任がある", x:"Each member is responsible for one section.", xj:"各メンバーが1つの部分に責任をもつ。", e:"be responsible for A。名詞は responsibility。"},
-{u:"標準", d:1, q:"accommodation", p:"名", c:["宿泊施設","適応力","調整役","収容人数"], a:"宿泊施設", x:"Accommodation is included in the tour price.", xj:"宿泊費はツアー料金に含まれています。", e:"動詞 accommodate（収容する・便宜をはかる）。案内文で頻出。"},
-{u:"標準", d:1, q:"accessible", p:"形", c:["利用しやすい・行きやすい","立ち入り禁止の","高価な","複雑な"], a:"利用しやすい・行きやすい", x:"The museum is easily accessible by bus.", xj:"その博物館はバスで行きやすい。", e:"be accessible to A。名詞は access / accessibility。"},
-{u:"標準", d:1, q:"administration", p:"名", c:["運営・管理","入場許可","賞賛","付属品"], a:"運営・管理", x:"The school administration approved the plan.", xj:"学校の運営側はその計画を承認した。", e:"動詞 administer。「政権」の意味でも使う。"},
-{u:"標準", d:1, q:"burden", p:"名", c:["負担","恩恵","秩序","境界"], a:"負担", x:"The new system reduces the burden on teachers.", xj:"その新しい仕組みは教員の負担を減らす。", e:"a burden on A。動詞では「重荷を負わせる」。"},
-{u:"標準", d:1, q:"citizen", p:"名", c:["市民","訪問者","職員","候補者"], a:"市民", x:"Citizens can vote online in this country.", xj:"この国では市民がオンラインで投票できる。", e:"citizenship（市民権）。選挙・社会を扱う長文で出る。"},
-{u:"標準", d:1, q:"deposit", p:"動・名", c:["預ける・保証金","引き出す・出金","処分する・処分料","分割する・分割金"], a:"預ける・保証金", x:"You need to pay a deposit when you book.", xj:"予約のときに保証金を払う必要があります。", e:"「（お金を）預ける」と「敷金・内金」。案内文で出る。"},
-{u:"標準", d:1, q:"disease", p:"名", c:["病気","不足","解散","装置"], a:"病気", x:"Mosquitoes can spread serious diseases.", xj:"蚊は深刻な病気を広めることがある。", e:"illness より医学的な「疾患」。理科系の長文で頻出。"},
-{u:"標準", d:1, q:"management", p:"名", c:["管理・経営","測定","記念","義務"], a:"管理・経営", x:"Good time management is a useful skill.", xj:"よい時間管理は役に立つ技能だ。", e:"動詞 manage（管理する・なんとかやり遂げる）。"},
-{u:"標準", d:1, q:"release", p:"動・名", c:["発表する・放つ","回収する・回収","禁じる・禁止","延期する・延期"], a:"発表する・放つ", x:"The company released a new model last month.", xj:"その会社は先月新型を発表した。", e:"「解き放つ」が原義。press release（報道発表）。"},
-{u:"標準", d:1, q:"reliable", p:"形", c:["信頼できる","当てにならない","繰り返しの","責任のある"], a:"信頼できる", x:"Always use reliable sources for your report.", xj:"レポートには必ず信頼できる出典を使いなさい。", e:"動詞 rely on。反意語は unreliable。"},
-{u:"標準", d:1, q:"routine", p:"名・形", c:["決まった手順・日課","例外・例外的な","近道・手早い","儀式・儀礼的な"], a:"決まった手順・日課", x:"Exercise is part of my daily routine.", xj:"運動は私の毎日の習慣の一部だ。", e:"形容詞では「決まりきった」。生活習慣の文章で出る。"},
-{u:"標準", d:1, q:"secure", p:"形・動", c:["安全な・確保する","危険な・手放す","秘密の・公開する","確実な・疑う"], a:"安全な・確保する", x:"Keep your password in a secure place.", xj:"パスワードは安全な場所に保管しなさい。", e:"名詞は security。動詞の「確保する」は obtain に近い。"},
-{u:"標準", d:1, q:"property", p:"名", c:["特性・財産","適正さ","提案","比率"], a:"特性・財産", x:"This material has useful properties.", xj:"この素材には有用な特性がある。", e:"理科系では複数形で「性質」。日常では「財産・不動産」。"},
-{u:"標準", d:1, q:"passive", p:"形", c:["受け身の","積極的な","攻撃的な","可能な"], a:"受け身の", x:"Listening should not be a passive activity.", xj:"聞くことは受け身の活動であるべきではない。", e:"反意語は active。文法の「受動態」も passive voice。"},
-{u:"標準", d:1, q:"creative", p:"形", c:["創造的な","破壊的な","伝統的な","消極的な"], a:"創造的な", x:"The club encourages creative thinking.", xj:"その部は創造的な考え方を促している。", e:"動詞 create、名詞 creativity（創造性）。"},
-{u:"標準", d:1, q:"satisfied", p:"形", c:["満足した","不満な","不安な","無関心な"], a:"満足した", x:"Most customers were satisfied with the service.", xj:"ほとんどの客はそのサービスに満足していた。", e:"be satisfied with A。名詞は satisfaction。"},
-{u:"標準", d:1, q:"inspire", p:"動", c:["奮い立たせる・着想を与える","落胆させる","模倣する","強制する"], a:"奮い立たせる・着想を与える", x:"Her speech inspired many students.", xj:"彼女の演説は多くの生徒を奮い立たせた。", e:"be inspired by A（Aに触発される）。名詞 inspiration。"},
-{u:"標準", d:1, q:"unfamiliar", p:"形", c:["なじみのない","よく知っている","親しみやすい","一般的な"], a:"なじみのない", x:"Guessing unfamiliar words from context is a useful skill.", xj:"なじみのない語を文脈から推測するのは役立つ技能だ。", e:"be unfamiliar to / with A。familiar の反対。"},
-{u:"標準", d:1, q:"globally", p:"副", c:["世界的に","局所的に","部分的に","一時的に"], a:"世界的に", x:"This problem is discussed globally.", xj:"この問題は世界的に議論されている。", e:"形容詞 global。反意語は locally。"},
-{u:"標準", d:2, q:"merely", p:"副", c:["単に・ほんの","非常に","かろうじて","ほとんど～ない"], a:"単に・ほんの", x:"It was merely a misunderstanding.", xj:"それは単なる誤解にすぎなかった。", e:"only とほぼ同義。not merely A but also B の形も出る。"},
-{u:"標準", d:2, q:"moreover", p:"副", c:["そのうえ","しかしながら","したがって","たとえば"], a:"そのうえ", x:"The plan is cheap. Moreover, it is easy to start.", xj:"その計画は安い。さらに始めるのも簡単だ。", e:"furthermore・in addition と同義。論を積み増す合図。"},
-{u:"標準", d:2, q:"fascinating", p:"形", c:["とても興味深い","退屈な","不快な","平凡な"], a:"とても興味深い", x:"The documentary was fascinating.", xj:"そのドキュメンタリーはとても興味深かった。", e:"be fascinated by A（Aに魅了される）。人と物で形が変わる。"},
-{u:"標準", d:2, q:"set up", p:"熟", c:["設置する・立ち上げる","片付ける","中止する","延期する"], a:"設置する・立ち上げる", x:"They set up a new club last year.", xj:"彼らは昨年新しい部を立ち上げた。", e:"「（機器を）設定する」の意味でも出る。名詞は setup。"},
-{u:"標準", d:2, q:"end up", p:"熟", c:["結局～になる","終わらせる","立ち上がる","切り上げる"], a:"結局～になる", x:"We ended up staying an extra night.", xj:"私たちは結局もう一泊することになった。", e:"end up doing / end up with A。予想外の結末を表す。"},
-{u:"標準", d:2, q:"give up", p:"熟", c:["あきらめる","引き受ける","持ち上げる","譲り受ける"], a:"あきらめる", x:"Don't give up before you try.", xj:"やってみる前にあきらめてはいけない。", e:"give up doing（～するのをやめる）。to do は不可。"},
-{u:"標準", d:2, q:"deal with", p:"熟", c:["対処する・扱う","分配する","取り消す","延期する"], a:"対処する・扱う", x:"How do you deal with stress?", xj:"あなたはストレスにどう対処しますか。", e:"cope with とほぼ同義。「（話題を）扱う」の意味も。"},
-{u:"標準", d:2, q:"look forward to", p:"熟", c:["～を楽しみに待つ","～を見落とす","～を思い出す","～に用心する"], a:"～を楽しみに待つ", x:"I'm looking forward to seeing you.", xj:"お会いできるのを楽しみにしています。", e:"to のあとは名詞か動名詞。to see は誤り。メールの結びで頻出。"},
-{u:"標準", d:2, q:"pay attention to", p:"熟", c:["～に注意を払う","～に金を払う","～を無視する","～を待つ"], a:"～に注意を払う", x:"Pay attention to the underlined part.", xj:"下線部に注意しなさい。", e:"設問の指示文でも出る。attention は数えられない名詞。"},
-{u:"標準", d:2, q:"take place", p:"熟", c:["行われる・起こる","場所を取る","席に着く","位置を変える"], a:"行われる・起こる", x:"The ceremony will take place in the gym.", xj:"式は体育館で行われる。", e:"受動態にはしない（is taken place は誤り）。案内文で頻出。"},
-
-{u:"標準", d:1, q:"rearrange", p:"動", c:["並べ替える","取り消す","繰り返す","装飾する"], a:"並べ替える", x:"Rearrange the words to make a sentence.", xj:"語を並べ替えて文を作りなさい。", e:"設問の指示文で頻出。re-（再び）＋arrange（並べる）。"},
-{u:"標準", d:1, q:"rewrite", p:"動", c:["書き直す","書き写す","要約する","訂正を求める"], a:"書き直す", x:"Rewrite the sentence using the word in brackets.", xj:"かっこ内の語を使って文を書き直しなさい。", e:"設問の指示文で頻出。活用は rewrite-rewrote-rewritten。"},
-{u:"標準", d:1, q:"contrast", p:"名", c:["対比・違い","対面","契約","縮小"], a:"対比・違い", x:"There is a sharp contrast between the two graphs.", xj:"2つのグラフには際立った違いがある。", e:"a contrast between A and B。熟語 in contrast（対照的に）も収録済み。"},
-{u:"標準", d:1, q:"preserve", p:"動", c:["保存する・保護する","破壊する","消費する","改造する"], a:"保存する・保護する", x:"We must preserve these old buildings.", xj:"これらの古い建物を保存しなければならない。", e:"名詞は preservation。conserve（資源を大事に使う）と近い。"},
-{u:"標準", d:1, q:"unite", p:"動", c:["団結させる・結びつける","分裂させる","独立する","並べる"], a:"団結させる・結びつける", x:"The event united people from many countries.", xj:"その催しは多くの国の人々を結びつけた。", e:"形容詞 united（United States の united）。名詞は unity / union。"},
-{u:"標準", d:1, q:"concern", p:"名・動", c:["心配・関わる","安心・放置する","信頼・信じる","関心の無さ・無視する"], a:"心配・関わる", x:"There is growing concern about plastic waste.", xj:"プラスチックごみへの懸念が高まっている。", e:"be concerned about A（心配する）／be concerned with A（関係がある）。"},
-{u:"標準", d:1, q:"participant", p:"名", c:["参加者","主催者","観客","審査員"], a:"参加者", x:"All participants will receive a certificate.", xj:"参加者全員に修了証が渡されます。", e:"動詞 participate、名詞 participation。案内文・調査の説明で頻出。"},
-{u:"標準", d:1, q:"succeed", p:"動", c:["成功する・後を継ぐ","失敗する","中断する","従う"], a:"成功する・後を継ぐ", x:"She succeeded in passing the exam.", xj:"彼女は試験に合格することに成功した。", e:"succeed in doing。名詞は success、形容詞は successful。"},
-{u:"標準", d:1, q:"tend", p:"動", c:["～する傾向がある","～を拒む","～を世話しない","～を予告する"], a:"～する傾向がある", x:"Prices tend to rise in summer.", xj:"夏には価格が上がる傾向がある。", e:"tend to do。名詞は tendency。図表の傾向説明で頻出。"},
-{u:"標準", d:1, q:"adapt", p:"動", c:["適応する・作り変える","採用する","拒否する","模倣する"], a:"適応する・作り変える", x:"Animals adapt to their environment.", xj:"動物は環境に適応する。", e:"adapt to A。adopt（採用する）とつづりが1字違いなので注意。"},
-{u:"標準", d:1, q:"amaze", p:"動", c:["びっくりさせる","退屈させる","安心させる","混乱させる"], a:"びっくりさせる", x:"The result amazed everyone.", xj:"その結果は皆を驚かせた。", e:"be amazed at / by A。形容詞 amazing（驚くべき）。"},
-{u:"標準", d:1, q:"attachment", p:"名", c:["添付ファイル・愛着","切り離し","付属品店","出席"], a:"添付ファイル・愛着", x:"Please open the attachment in my email.", xj:"メールの添付ファイルを開いてください。", e:"動詞 attach（attach A to B）。メール文で頻出。"},
-{u:"標準", d:1, q:"chemical", p:"名・形", c:["化学物質・化学の","化石・地質の","機械・機械の","電気・電気の"], a:"化学物質・化学の", x:"Some chemicals are harmful to fish.", xj:"化学物質の中には魚に有害なものもある。", e:"名詞は chemistry（化学）。理科系の長文で頻出。"},
-{u:"標準", d:1, q:"combine", p:"動", c:["組み合わせる","分解する","比較する","交換する"], a:"組み合わせる", x:"The dish combines sweet and sour flavors.", xj:"その料理は甘みと酸味を組み合わせている。", e:"combine A with B。名詞は combination。"},
-{u:"標準", d:1, q:"complain", p:"動", c:["不平を言う","褒める","説明する","完成させる"], a:"不平を言う", x:"Some residents complained about the noise.", xj:"住民の中には騒音に苦情を言う人もいた。", e:"complain about / of A。名詞は complaint。"},
-{u:"標準", d:1, q:"creature", p:"名", c:["生き物","創造者","彫刻","生態系"], a:"生き物", x:"Deep-sea creatures live without sunlight.", xj:"深海の生き物は日光なしで生きている。", e:"動詞 create から。生物を扱う長文で頻出。"},
-{u:"標準", d:1, q:"employment", p:"名", c:["雇用・就業","失業手当","配置","起用予定"], a:"雇用・就業", x:"The city is trying to increase employment.", xj:"その市は雇用を増やそうとしている。", e:"動詞 employ、名詞 employer（雇い主）／employee（従業員）。"},
-{u:"標準", d:1, q:"fee", p:"名", c:["料金・手数料","罰金","給料","寄付"], a:"料金・手数料", x:"The entrance fee is 500 yen.", xj:"入場料は500円です。", e:"サービスや入場に払う料金。案内文・図表問題で頻出。"},
-{u:"標準", d:1, q:"float", p:"動", c:["浮かぶ","沈む","流れ出す","凍る"], a:"浮かぶ", x:"Plastic bottles float on the surface of the sea.", xj:"ペットボトルは海面に浮かぶ。", e:"反意語は sink（沈む）。形容詞 floating（浮かんでいる）。"},
-{u:"標準", d:1, q:"graduate", p:"動・名", c:["卒業する・卒業生","入学する・新入生","中退する・中退者","進級する・在校生"], a:"卒業する・卒業生", x:"She graduated from high school last year.", xj:"彼女は昨年高校を卒業した。", e:"graduate from A（from を落とさない）。名詞は graduation。"},
-{u:"標準", d:1, q:"hire", p:"動", c:["雇う・借りる","解雇する","貸し出す","研修する"], a:"雇う・借りる", x:"The company hired ten new workers.", xj:"その会社は10人の新しい従業員を雇った。", e:"イギリス英語では「（一時的に）借りる」の意味でもよく使う。"},
-{u:"標準", d:1, q:"locate", p:"動", c:["位置を突き止める・置く","移動させる","封鎖する","賃貸する"], a:"位置を突き止める・置く", x:"The hotel is located near the station.", xj:"そのホテルは駅の近くにある。", e:"be located in / near A（～にある）の形で頻出。名詞 location。"},
-{u:"標準", d:1, q:"motivate", p:"動", c:["やる気にさせる","落胆させる","動かす","監視する"], a:"やる気にさせる", x:"Small goals motivate students to keep going.", xj:"小さな目標は生徒が続ける気にさせる。", e:"motivate 人 to do。名詞は motivation。"},
-{u:"標準", d:1, q:"operate", p:"動", c:["操作する・運営する","停止する","修理する","観察する"], a:"操作する・運営する", x:"This machine is easy to operate.", xj:"この機械は操作が簡単だ。", e:"「手術する」の意味もある（operate on A）。名詞は operation。"},
-{u:"標準", d:1, q:"researcher", p:"名", c:["研究者","検索履歴","調査費","研究室"], a:"研究者", x:"Researchers collected data for three years.", xj:"研究者たちは3年間データを集めた。", e:"research＋er。第6問の研究紹介で頻出。"},
-{u:"標準", d:1, q:"reward", p:"名・動", c:["報酬・報いる","罰・罰する","警告・警告する","記録・記録する"], a:"報酬・報いる", x:"Hard work brings its own reward.", xj:"努力はそれ自体が報いをもたらす。", e:"award（賞）と混同しやすい。形容詞 rewarding（やりがいのある）。"},
-{u:"標準", d:1, q:"sight", p:"名", c:["視力・光景","音","場所","感触"], a:"視力・光景", x:"The view from the top was a wonderful sight.", xj:"頂上からの眺めはすばらしい光景だった。", e:"site（用地）と同音。sightseeing（観光）で覚えるとよい。"},
-{u:"標準", d:1, q:"vehicle", p:"名", c:["乗り物","車庫","運転手","燃料"], a:"乗り物", x:"Electric vehicles are becoming cheaper.", xj:"電気自動車は安くなってきている。", e:"発音は「ヴィーイクル」（h は読まない）。車・バス・トラックの総称。"},
-{u:"標準", d:1, q:"transport", p:"動・名", c:["輸送する・輸送","翻訳する・翻訳","移植する・移植","変形する・変形"], a:"輸送する・輸送", x:"The goods are transported by ship.", xj:"その商品は船で輸送される。", e:"アメリカ英語の名詞は transportation。transform（一変させる）と区別。"},
-{u:"標準", d:1, q:"manage", p:"動", c:["何とかやり遂げる・管理する","失敗する","放棄する","委任する"], a:"何とかやり遂げる・管理する", x:"She managed to finish the report on time.", xj:"彼女は何とか時間内にレポートを終えた。", e:"manage to do（苦労して～する）。名詞は management。"},
-{u:"標準", d:1, q:"harm", p:"名・動", c:["害・害を与える","調和・調和させる","収穫・収穫する","警報・警告する"], a:"害・害を与える", x:"Too much sunlight can harm your skin.", xj:"日光を浴びすぎると肌を傷めることがある。", e:"形容詞 harmful（有害な）／harmless（無害な）。"},
-{u:"標準", d:1, q:"recycle", p:"動", c:["再生利用する","再利用を断る","循環を止める","分解する"], a:"再生利用する", x:"These bottles can be recycled into clothing.", xj:"これらのボトルは衣料に再生できる。", e:"形容詞 recyclable（再生可能な）。環境の長文で頻出。"},
-{u:"標準", d:1, q:"regret", p:"動・名", c:["後悔する・後悔","満足する・満足","予告する・予告","記録する・記録"], a:"後悔する・後悔", x:"I regret not studying harder.", xj:"もっと勉強しなかったことを後悔している。", e:"regret doing（したことを後悔）／regret to do（残念ながら～する）。"},
-{u:"標準", d:1, q:"relieve", p:"動", c:["和らげる","悪化させる","信じる","解放を拒む"], a:"和らげる", x:"The medicine relieves pain quickly.", xj:"その薬は痛みをすぐに和らげる。", e:"be relieved（ほっとする）。名詞は relief。believe とつづりが似る。"},
-{u:"標準", d:1, q:"resource", p:"名", c:["資源・財源","出典","再出発","予備室"], a:"資源・財源", x:"Water is a limited resource.", xj:"水は限りある資源だ。", e:"source（源・出典）と混同しやすい。natural resources（天然資源）。"},
-{u:"標準", d:1, q:"retire", p:"動", c:["引退する","再挑戦する","撤回する","復帰する"], a:"引退する", x:"He retired from teaching last spring.", xj:"彼は昨春、教職を退いた。", e:"retire from A。名詞は retirement。"},
-{u:"標準", d:1, q:"salary", p:"名", c:["給料","売上","貯金","手当の申請"], a:"給料", x:"She took the job for a higher salary.", xj:"彼女はより高い給料を求めてその仕事に就いた。", e:"月給・年俸のように決まった額。時給は wage。"},
-{u:"標準", d:1, q:"shift", p:"名・動", c:["移り変わり・移す","停止・止める","分割・分ける","維持・保つ"], a:"移り変わり・移す", x:"There has been a shift toward online shopping.", xj:"オンライン購入への移行が起きている。", e:"「交替勤務」の意味もある（night shift）。図表の変化説明で出る。"},
-{u:"標準", d:1, q:"struggle", p:"動・名", c:["苦労する・奮闘","楽にこなす・余裕","逃げる・逃走","休む・休息"], a:"苦労する・奮闘", x:"Many students struggle with listening.", xj:"多くの生徒がリスニングに苦戦している。", e:"struggle with / to do。「もがく」が原義。"},
-{u:"標準", d:1, q:"surround", p:"動", c:["取り囲む","解放する","貫通する","並べる"], a:"取り囲む", x:"The lake is surrounded by mountains.", xj:"その湖は山に囲まれている。", e:"be surrounded by A。名詞 surroundings（周囲の環境）。"},
-{u:"標準", d:1, q:"typical", p:"形", c:["典型的な","例外的な","理論上の","一時的な"], a:"典型的な", x:"This is a typical example of the problem.", xj:"これはその問題の典型例だ。", e:"be typical of A。副詞 typically（たいてい）。"},
-{u:"標準", d:1, q:"unlike", p:"前", c:["～と違って","～のように","～が嫌いで","～に加えて"], a:"～と違って", x:"Unlike her sister, she enjoys sports.", xj:"姉と違って、彼女はスポーツを楽しむ。", e:"前置詞。形容詞 unlikely（ありそうにない）とは別物。"},
-{u:"標準", d:1, q:"update", p:"動・名", c:["最新のものにする・更新","日付を消す・削除","前倒しする・繰上げ","保存する・控え"], a:"最新のものにする・更新", x:"Please update your contact information.", xj:"連絡先を最新のものに更新してください。", e:"案内文・アプリの説明で頻出。up＋date（日付を新しく）。"},
-{u:"標準", d:1, q:"workplace", p:"名", c:["職場","作業台","勤務時間","仕事量"], a:"職場", x:"Technology has changed the workplace.", xj:"技術は職場を変えた。", e:"work＋place。働き方を扱う長文で頻出。"},
-{u:"標準", d:1, q:"properly", p:"副", c:["きちんと","おおよそ","自分自身で","所有して"], a:"きちんと", x:"Make sure the lid is closed properly.", xj:"ふたがきちんと閉まっているか確認しなさい。", e:"形容詞 proper（適切な）。property（財産・特性）とは別。"},
-{u:"標準", d:1, q:"communicate", p:"動", c:["意思を伝え合う","命令する","通勤する","共有を拒む"], a:"意思を伝え合う", x:"They communicate mainly by email.", xj:"彼らは主にメールでやりとりしている。", e:"communicate with A。名詞 communication。commute（通勤する）と区別。"},
-{u:"標準", d:2, q:"climate", p:"名", c:["気候","天気予報","登山","風向き"], a:"気候", x:"Climate change affects farming.", xj:"気候変動は農業に影響する。", e:"weather（その日の天気）より長い期間の「気候」。climate change は必出。"},
-
-/* ============ ハイレベル ============ */
-{u:"ハイレベル", d:1, q:"perceive", p:"動", c:["知覚する・認識する","予測する","説得する","保存する"], a:"知覚する・認識する", x:"Children perceive the world differently from adults.", xj:"子どもは大人とは違った形で世界を認識している。", e:"名詞は perception（知覚・とらえ方）。認知に関する文章で頻出。"},
-{u:"ハイレベル", d:1, q:"exposure", p:"名", c:["さらされること・接触","説明","展示会","露天商"], a:"さらされること・接触", x:"Exposure to English at an early age helps a lot.", xj:"幼いうちに英語に触れることは大いに役立つ。", e:"動詞は expose。be exposed to A（Aにさらされる）。"},
-{u:"ハイレベル", d:1, q:"tolerance", p:"名", c:["耐性・寛容","攻撃性","期待","無関心"], a:"耐性・寛容", x:"These animals have a high tolerance for cold.", xj:"これらの動物は寒さへの耐性が高い。", e:"動詞は tolerate（我慢する）。形容詞 tolerant。"},
-{u:"ハイレベル", d:1, q:"perseverance", p:"名", c:["忍耐強さ","無関心","柔軟性","独創性"], a:"忍耐強さ", x:"Success in language learning requires perseverance.", xj:"語学の成功には粘り強さが必要だ。", e:"動詞は persevere。共通テストの「学習法」の文章で実際に出た語。"},
-{u:"ハイレベル", d:1, q:"discomfort", p:"名", c:["不快感","不都合","不平等","不足"], a:"不快感", x:"Some students reported discomfort after long screen use.", xj:"長時間の画面使用のあと不快感を訴えた生徒もいた。", e:"dis-（否定）＋ comfort（快適さ）。健康を扱う文章で出る。"},
-{u:"ハイレベル", d:1, q:"diversity", p:"名", c:["多様性","相違点","分裂","方向"], a:"多様性", x:"The school values diversity among its students.", xj:"その学校は生徒の多様性を大切にしている。", e:"形容詞は diverse。cultural diversity（文化的多様性）。"},
-{u:"ハイレベル", d:1, q:"encounter", p:"動・名", c:["出くわす・遭遇","逃れる・回避","招く・招待","避ける・回り道"], a:"出くわす・遭遇", x:"We encountered several problems during the project.", xj:"私たちはその企画中にいくつかの問題に直面した。", e:"他動詞なので encounter with は不要。名詞でも使う。"},
-{u:"ハイレベル", d:1, q:"artificial", p:"形", c:["人工の","天然の","伝統的な","偶発的な"], a:"人工の", x:"The drink contains artificial sweeteners.", xj:"その飲み物には人工甘味料が含まれている。", e:"artificial intelligence（人工知能）。反意語は natural。"},
-{u:"ハイレベル", d:1, q:"resistant", p:"形", c:["抵抗力のある","従順な","もろい","柔軟な"], a:"抵抗力のある", x:"This fabric is resistant to water and dirt.", xj:"この生地は水と汚れに強い。", e:"be resistant to A。名詞 resistance、動詞 resist。"},
-{u:"ハイレベル", d:1, q:"permanent", p:"形", c:["永続的な","一時的な","季節的な","部分的な"], a:"永続的な", x:"The damage to the coral was permanent.", xj:"そのサンゴへの被害は永続的なものだった。", e:"反意語は temporary（一時的な）。副詞 permanently。"},
-{u:"ハイレベル", d:1, q:"psychological", p:"形", c:["心理的な","生理的な","物理的な","論理的な"], a:"心理的な", x:"The study looked at the psychological effects of stress.", xj:"その研究はストレスの心理的影響を調べた。", e:"physiological（生理的な）・physical（身体的な）と区別。"},
-{u:"ハイレベル", d:1, q:"nocturnal", p:"形", c:["夜行性の","昼行性の","肉食の","群れをなす"], a:"夜行性の", x:"Owls are nocturnal, so they hunt at night.", xj:"フクロウは夜行性なので夜に狩りをする。", e:"反意語は diurnal。生物を扱う第6問で出た語。"},
-{u:"ハイレベル", d:1, q:"acoustic", p:"形", c:["音響の","電気の","視覚の","化学の"], a:"音響の", x:"The hall has excellent acoustic properties.", xj:"そのホールは音響特性がすぐれている。", e:"名詞 acoustics（音響学・音響効果）。実際に第6問で出た語。"},
-{u:"ハイレベル", d:1, q:"absorb", p:"動", c:["吸収する","放出する","反射する","分解する"], a:"吸収する", x:"The material absorbs sound and reduces noise.", xj:"その素材は音を吸収して騒音を減らす。", e:"be absorbed in A なら「Aに夢中である」。名詞は absorption。"},
-{u:"ハイレベル", d:1, q:"emerge", p:"動", c:["現れる・明らかになる","消滅する","沈む","分裂する"], a:"現れる・明らかになる", x:"A clear pattern emerged from the data.", xj:"そのデータから明確な傾向が浮かび上がった。", e:"名詞は emergence。emergency（緊急事態）とは別語。"},
-{u:"ハイレベル", d:2, q:"transform", p:"動", c:["一変させる","保存する","運搬する","翻訳する"], a:"一変させる", x:"The internet has transformed the way we learn.", xj:"インターネットは私たちの学び方を一変させた。", e:"transform A into B。名詞は transformation。transport と混同しない。"},
-{u:"ハイレベル", d:1, q:"demonstrate", p:"動", c:["証明する・実演する","隠す","否定する","延期する"], a:"証明する・実演する", x:"The experiment demonstrates how sound travels.", xj:"その実験は音がどう伝わるかを示している。", e:"名詞は demonstration。show の硬い語。"},
-{u:"ハイレベル", d:1, q:"illustrate", p:"動", c:["例で説明する","誇張する","省略する","翻訳する"], a:"例で説明する", x:"The graph illustrates the change in temperature.", xj:"そのグラフは気温の変化を示している。", e:"「挿絵を描く」の意味もあるが、長文では「例示する」。"},
-{u:"ハイレベル", d:2, q:"acquire", p:"動", c:["習得する・獲得する","放棄する","貸し出す","消費する"], a:"習得する・獲得する", x:"Children acquire language without formal lessons.", xj:"子どもは正式な授業なしに言語を習得する。", e:"名詞は acquisition（習得）。language acquisition は定番表現。"},
-{u:"ハイレベル", d:1, q:"enhance", p:"動", c:["高める・向上させる","損なう","模倣する","中断する"], a:"高める・向上させる", x:"Good sleep enhances memory and learning.", xj:"良質な睡眠は記憶と学習を高める。", e:"improve の硬い語。名詞は enhancement。"},
-{u:"ハイレベル", d:1, q:"reveal", p:"動", c:["明らかにする","隠す","誇張する","繰り返す"], a:"明らかにする", x:"The study revealed a surprising connection.", xj:"その研究は意外なつながりを明らかにした。", e:"反意語は conceal（隠す）。研究結果の紹介で頻出。"},
-{u:"ハイレベル", d:1, q:"anticipate", p:"動", c:["前もって見越す","回想する","後悔する","無視する"], a:"前もって見越す", x:"We did not anticipate such a large turnout.", xj:"私たちはこれほど多くの参加者を予期していなかった。", e:"expect より硬く「先回りして備える」ニュアンス。expect（予期する）と対で覚える。"},
-{u:"ハイレベル", d:2, q:"subtle", p:"形", c:["微妙な・かすかな","露骨な","巨大な","規則的な"], a:"微妙な・かすかな", x:"There is a subtle difference between the two words.", xj:"その2語の間には微妙な違いがある。", e:"b は発音しない（サトゥル）。「わずかで気づきにくい」が中心の意味。"},
-{u:"ハイレベル", d:2, q:"phenomenon", p:"名", c:["現象","仮説","方針","装置"], a:"現象", x:"Scientists cannot fully explain this phenomenon.", xj:"科学者はこの現象を完全には説明できない。", e:"複数形は phenomena。不規則変化に注意。"},
-{u:"ハイレベル", d:1, q:"mechanism", p:"名", c:["仕組み","機械工","運動量","記念碑"], a:"仕組み", x:"Researchers studied the mechanism of memory.", xj:"研究者たちは記憶の仕組みを研究した。", e:"「機械」ではなく「働き方・作用の仕組み」。説明文で頻出。"},
-{u:"ハイレベル", d:2, q:"implication", p:"名", c:["含意・（起こりうる）影響","応用","複製","説明"], a:"含意・（起こりうる）影響", x:"The findings have important implications for education.", xj:"その発見は教育にとって重要な意味をもつ。", e:"動詞 imply（ほのめかす）から。「言外の意味」と「波及効果」の両方。"},
-{u:"ハイレベル", d:2, q:"perspective", p:"名", c:["観点","展望台","見取り図","期待"], a:"観点", x:"Try to see the problem from another perspective.", xj:"別の観点からその問題を見てみなさい。", e:"from a ... perspective（～の観点から）。point of view と同義。"},
-{u:"ハイレベル", d:2, q:"constraint", p:"名", c:["制約","建設","一定量","抑制力のなさ"], a:"制約", x:"Time constraints made the project difficult.", xj:"時間の制約がその企画を難しくした。", e:"動詞は constrain（制限する）。restriction とほぼ同義。"},
-{u:"ハイレベル", d:2, q:"notion", p:"名", c:["概念・考え","通知","動作","記録"], a:"概念・考え", x:"The notion that talent is fixed is now questioned.", xj:"才能は生まれつき決まっているという考えは今や疑われている。", e:"idea / concept の硬い語。the notion that ... の同格構文で出る。"},
-{u:"ハイレベル", d:2, q:"precise", p:"形", c:["正確な・厳密な","おおよその","あいまいな","一般的な"], a:"正確な・厳密な", x:"We need precise measurements for this experiment.", xj:"この実験には正確な測定が必要だ。", e:"副詞 precisely（まさに）。accurate とほぼ同義。"},
-{u:"ハイレベル", d:2, q:"distinct", p:"形", c:["明確に異なる","似通った","あいまいな","一時的な"], a:"明確に異なる", x:"The two species are distinct from each other.", xj:"その2つの種は互いにはっきり異なる。", e:"be distinct from A。distinctive は「他と違う特徴的な」。"},
-{u:"ハイレベル", d:2, q:"crucial", p:"形", c:["決定的に重要な","些細な","一時的な","形式的な"], a:"決定的に重要な", x:"The first few minutes are crucial in a presentation.", xj:"発表では最初の数分が決定的に重要だ。", e:"very important の強い言い換え。vital / essential と同義。"},
-{u:"ハイレベル", d:2, q:"sustainable", p:"形", c:["持続可能な","一時的な","再生不能な","競争的な"], a:"持続可能な", x:"The city is working toward a sustainable future.", xj:"その市は持続可能な未来に向けて取り組んでいる。", e:"動詞は sustain。SDGs 関連の長文で必出。"},
-{u:"ハイレベル", d:1, q:"conscious", p:"形", c:["意識している","無意識の","無関心な","自信に満ちた"], a:"意識している", x:"She is very conscious of her health.", xj:"彼女は健康をとても気にかけている。", e:"be conscious of A。名詞 consciousness（意識）。"},
-{u:"ハイレベル", d:2, q:"deliberate", p:"形", c:["意図的な","偶然の","衝動的な","慎重すぎる"], a:"意図的な", x:"The mistake was not deliberate.", xj:"その間違いは意図的なものではなかった。", e:"副詞 deliberately（わざと）。動詞では「熟考する」。"},
-{u:"ハイレベル", d:2, q:"derive", p:"動", c:["引き出す・由来する","破壊する","分配する","反論する"], a:"引き出す・由来する", x:"Many English words derive from Latin.", xj:"多くの英単語はラテン語に由来する。", e:"derive from A（Aに由来する）／derive A from B（BからAを得る）。"},
-{u:"ハイレベル", d:1, q:"imply", p:"動", c:["ほのめかす・意味する","明言する","否定する","繰り返す"], a:"ほのめかす・意味する", x:"His silence implied that he disagreed.", xj:"彼の沈黙は反対だということをほのめかしていた。", e:"設問「What does the author imply?」で頻出。名詞は implication。"},
-{u:"ハイレベル", d:1, q:"infer", p:"動", c:["推論する","断言する","伝達する","干渉する"], a:"推論する", x:"What can you infer from the graph?", xj:"そのグラフから何が推測できますか。", e:"imply は書き手が「ほのめかす」、infer は読み手が「読み取る」。向きが逆。"},
-{u:"ハイレベル", d:2, q:"integrate", p:"動", c:["統合する","分離する","模倣する","省略する"], a:"統合する", x:"The school integrates technology into every subject.", xj:"その学校はすべての教科にICTを組み込んでいる。", e:"integrate A into B。名詞は integration。"},
-{u:"ハイレベル", d:1, q:"modify", p:"動", c:["修正する","破棄する","模倣する","拡大する"], a:"修正する", x:"We modified the plan after the first trial.", xj:"最初の試行のあと計画を修正した。", e:"名詞は modification。change より「部分的に手を入れる」。"},
-{u:"ハイレベル", d:1, q:"pursue", p:"動", c:["追い求める","放棄する","説得する","購入する"], a:"追い求める", x:"She decided to pursue a career in science.", xj:"彼女は科学の道に進むことを決めた。", e:"名詞は pursuit。pursue a dream / a career の形で覚える。"},
-{u:"ハイレベル", d:2, q:"restrict", p:"動", c:["制限する","拡大する","保証する","促進する"], a:"制限する", x:"Access to the area is restricted after dark.", xj:"日没後その区域への立ち入りは制限されている。", e:"名詞は restriction。limit の硬い語。"},
-{u:"ハイレベル", d:2, q:"exceed", p:"動", c:["超える","下回る","一致する","接近する"], a:"超える", x:"The number of applicants exceeded 500.", xj:"応募者数は500人を超えた。", e:"形容詞 excessive（過度の）。図表の数値説明で出る。"},
-{u:"ハイレベル", d:2, q:"restore", p:"動", c:["元に戻す・回復させる","破壊する","保管する","置き換える"], a:"元に戻す・回復させる", x:"The old building was carefully restored.", xj:"その古い建物は丁寧に修復された。", e:"store（蓄える）とは別語。名詞は restoration。"},
-{u:"ハイレベル", d:2, q:"trigger", p:"動・名", c:["引き起こす・きっかけ","終わらせる・終結","抑える・抑制","予告する・予告"], a:"引き起こす・きっかけ", x:"Stress can trigger headaches.", xj:"ストレスは頭痛を引き起こすことがある。", e:"cause より「引き金を引く」ニュアンス。医学・心理の長文で頻出。"},
-{u:"ハイレベル", d:1, q:"species", p:"名", c:["（生物の）種","標本","場所","特徴"], a:"（生物の）種", x:"This species is found only on one island.", xj:"この種はある1つの島にしか生息していない。", e:"単数も複数も species（specie とは書かない）。生物の第6問で必出。"},
-{u:"ハイレベル", d:1, q:"metabolism", p:"名", c:["代謝","比喩","隕石","方法論"], a:"代謝", x:"Some animals slow their metabolism to survive winter.", xj:"冬を越すために代謝を落とす動物もいる。", e:"形容詞 metabolic。生物の長文で実際に出た語。"},
-{u:"ハイレベル", d:1, q:"density", p:"名", c:["密度","濃さの単位","破壊力","持続時間"], a:"密度", x:"Graphite has a lower density than diamond.", xj:"黒鉛はダイヤモンドより密度が低い。", e:"形容詞 dense（密集した）。理科系の説明文で出る。"},
-{u:"ハイレベル", d:1, q:"radiation", p:"名", c:["放射・放射線","反射","波長","蒸発"], a:"放射・放射線", x:"The material blocks harmful radiation from the sun.", xj:"その素材は太陽からの有害な放射線を遮る。", e:"動詞は radiate（放射する）。素材・環境の説明文で出る。"},
-{u:"ハイレベル", d:1, q:"motivation", p:"名", c:["動機づけ・やる気","移動","感情","記憶力"], a:"動機づけ・やる気", x:"Setting small goals helps keep your motivation high.", xj:"小さな目標を立てるとやる気を保ちやすい。", e:"動詞 motivate。学習法を扱う長文で頻出。"},
-{u:"ハイレベル", d:1, q:"stimulate", p:"動", c:["刺激する・促す","鎮める","模倣する","省略する"], a:"刺激する・促す", x:"Bright light stimulates the brain in the morning.", xj:"朝の明るい光は脳を刺激する。", e:"名詞 stimulation / stimulus（複数 stimuli）。"},
-{u:"ハイレベル", d:2, q:"consequently", p:"副", c:["その結果として","それにもかかわらず","たとえば","同様に"], a:"その結果として", x:"He missed the bus and consequently arrived late.", xj:"彼はバスに乗り遅れ、その結果遅刻した。", e:"therefore とほぼ同義。名詞は consequence。"},
-{u:"ハイレベル", d:1, q:"furthermore", p:"副", c:["さらに言えば","しかしながら","つまり","たとえば"], a:"さらに言えば", x:"The plan is cheap. Furthermore, it is easy to carry out.", xj:"その計画は安い。さらに実行も容易だ。", e:"moreover・in addition と同義。論を積み増す合図。"},
-{u:"ハイレベル", d:1, q:"in contrast", p:"熟", c:["対照的に","その結果","たとえば","加えて"], a:"対照的に", x:"City schools are large. In contrast, rural ones are small.", xj:"都市の学校は大きい。対照的に農村の学校は小さい。", e:"in contrast to A なら「Aとは対照的に」。図表の比較で頻出。"},
-{u:"ハイレベル", d:2, q:"initiative", p:"名", c:["主体性・新たな取り組み","初心者","開始時刻","慣例"], a:"主体性・新たな取り組み", x:"The city launched a new recycling initiative.", xj:"市は新しいリサイクルの取り組みを始めた。", e:"take the initiative（率先して行う）。動詞は initiate。"},
-
-{u:"ハイレベル", d:1, q:"assess", p:"動", c:["評価する・査定する","放置する","誇張する","分配する"], a:"評価する・査定する", x:"The test assesses your listening ability.", xj:"そのテストは聞く力を評価するものだ。", e:"名詞は assessment（評価）。evaluate とほぼ同義。"},
-{u:"ハイレベル", d:1, q:"characteristic", p:"名・形", c:["特徴・特有の","例外・例外的な","欠点・欠点のある","習慣・習慣的な"], a:"特徴・特有の", x:"Each species has its own characteristics.", xj:"それぞれの種が固有の特徴をもっている。", e:"be characteristic of A（Aに特有である）。動詞は characterize。"},
-{u:"ハイレベル", d:2, q:"circumstance", p:"名", c:["状況・事情","周辺部","儀式","偶然"], a:"状況・事情", x:"Under these circumstances, we had to cancel.", xj:"こうした事情のもと、中止せざるを得なかった。", e:"ふつう複数形。under the circumstances（そういう状況では）。"},
-{u:"ハイレベル", d:2, q:"perception", p:"名", c:["知覚・とらえ方","完成","例外","許可"], a:"知覚・とらえ方", x:"Color perception differs from person to person.", xj:"色のとらえ方は人によって違う。", e:"動詞は perceive。「事実そのもの」ではなく「どう受け取るか」。"},
-{u:"ハイレベル", d:2, q:"sensation", p:"名", c:["感覚","分別","文","季節"], a:"感覚", x:"Capsaicin creates a burning sensation.", xj:"カプサイシンは焼けるような感覚を生む。", e:"形容詞 sensational は「衝撃的な」。sense（感覚）と語源が同じ。"},
-{u:"ハイレベル", d:1, q:"sensitive", p:"形", c:["敏感な","鈍感な","分別のある","感情的な"], a:"敏感な", x:"Dogs are sensitive to high sounds.", xj:"犬は高い音に敏感だ。", e:"be sensitive to A。sensible（分別のある）と混同しやすい。"},
-{u:"ハイレベル", d:2, q:"dominant", p:"形", c:["支配的な・優勢な","従属的な","一時的な","中立の"], a:"支配的な・優勢な", x:"English is the dominant language on the internet.", xj:"英語はインターネット上で優勢な言語だ。", e:"動詞は dominate。名詞は dominance。"},
-{u:"ハイレベル", d:2, q:"biological", p:"形", c:["生物学的な","地質学的な","心理的な","経済的な"], a:"生物学的な", x:"Sleep serves an important biological function.", xj:"睡眠は重要な生物学的機能を果たしている。", e:"名詞は biology。第6問の理科系の文章で頻出。"},
-{u:"ハイレベル", d:1, q:"compound", p:"名", c:["化合物","部品","比率","境界"], a:"化合物", x:"These compounds give chili peppers their heat.", xj:"これらの化合物が唐辛子の辛さを生んでいる。", e:"「複合の」という形容詞、「悪化させる」という動詞の用法もある。"},
-{u:"ハイレベル", d:2, q:"dissolve", p:"動", c:["溶ける・溶かす","凝固する","蒸発する","沈殿する"], a:"溶ける・溶かす", x:"The powder dissolves quickly in warm water.", xj:"その粉は温かい水にすぐ溶ける。", e:"「（組織を）解散する」の意味もある。名詞は solution（溶液・解決）。"},
-{u:"ハイレベル", d:1, q:"convert", p:"動", c:["変換する","保存する","運搬する","比較する"], a:"変換する", x:"The device converts sunlight into electricity.", xj:"その装置は日光を電気に変える。", e:"convert A into B。名詞は conversion。"},
-{u:"ハイレベル", d:2, q:"accelerate", p:"動", c:["加速する","減速する","停止する","逆転する"], a:"加速する", x:"Warm water accelerates the process.", xj:"温かい水はその過程を速める。", e:"反意語は decelerate。名詞は acceleration。"},
-{u:"ハイレベル", d:2, q:"ultraviolet", p:"形", c:["紫外線の","赤外線の","可視光の","放射性の"], a:"紫外線の", x:"The fabric blocks ultraviolet rays.", xj:"その生地は紫外線を遮る。", e:"ultra（超）＋violet（紫）。UV と略される。"},
-{u:"ハイレベル", d:1, q:"nutrition", p:"名", c:["栄養","消化","代謝","衛生"], a:"栄養", x:"Good nutrition is essential for growth.", xj:"よい栄養は成長に不可欠だ。", e:"形容詞 nutritious（栄養のある）。健康を扱う長文で頻出。"},
-{u:"ハイレベル", d:2, q:"medication", p:"名", c:["薬・投薬","診断","手術","予防接種"], a:"薬・投薬", x:"He takes medication for his allergies.", xj:"彼はアレルギーの薬を飲んでいる。", e:"medicine より「処方された薬」に近い。動詞は medicate。"},
-{u:"ハイレベル", d:2, q:"therapy", p:"名", c:["治療・療法","理論","予防","診察"], a:"治療・療法", x:"Music therapy can reduce stress.", xj:"音楽療法はストレスを減らすことがある。", e:"therapist（療法士）。医療・心理の文章で頻出。"},
-{u:"ハイレベル", d:1, q:"disorder", p:"名", c:["障害・混乱","命令","秩序","方向"], a:"障害・混乱", x:"Sleep disorders affect many students.", xj:"睡眠障害は多くの生徒に影響している。", e:"dis-（否定）＋order（秩序）。医学では「疾患」。"},
-{u:"ハイレベル", d:1, q:"anxiety", p:"名", c:["不安","期待","無関心","満足"], a:"不安", x:"Many students feel anxiety before exams.", xj:"多くの生徒は試験前に不安を感じる。", e:"形容詞は anxious（不安な・切望して）。"},
-{u:"ハイレベル", d:1, q:"boredom", p:"名", c:["退屈","恐怖","誇り","混乱"], a:"退屈", x:"Boredom can actually lead to creativity.", xj:"退屈はむしろ創造性につながることがある。", e:"bored（退屈した）／boring（退屈させる）の名詞形。"},
-{u:"ハイレベル", d:2, q:"acceptance", p:"名", c:["受け入れ","拒絶","例外","接近"], a:"受け入れ", x:"The idea gained wide acceptance among researchers.", xj:"その考えは研究者の間で広く受け入れられた。", e:"動詞 accept。反意語は rejection。"},
-{u:"ハイレベル", d:1, q:"reject", p:"動", c:["拒否する","受け入れる","延期する","訂正する"], a:"拒否する", x:"Her application was rejected.", xj:"彼女の申し込みは断られた。", e:"名詞は rejection。accept の反対。"},
-{u:"ハイレベル", d:2, q:"reputation", p:"名", c:["評判","繰り返し","返済","代表"], a:"評判", x:"The school has a good reputation for science.", xj:"その学校は理科で評判がよい。", e:"have a reputation for A。形容詞は reputable。"},
-{u:"ハイレベル", d:1, q:"resident", p:"名", c:["住民","訪問者","滞在客","所有者"], a:"住民", x:"Local residents opposed the new road.", xj:"地元住民は新しい道路に反対した。", e:"動詞 reside（居住する）。名詞 residence（住居）。"},
-{u:"ハイレベル", d:1, q:"occupation", p:"名", c:["職業","趣味","休暇","機会"], a:"職業", x:"Please write your occupation on the form.", xj:"用紙に職業を書いてください。", e:"「占領」の意味もある。動詞 occupy（占める）。"},
-{u:"ハイレベル", d:1, q:"opponent", p:"名", c:["対戦相手・反対者","味方","審判","観客"], a:"対戦相手・反対者", x:"He studied the playing style of his opponent.", xj:"彼は対戦相手のプレースタイルを研究した。", e:"oppose（反対する）から。反意語は supporter。"},
-{u:"ハイレベル", d:1, q:"leadership", p:"名", c:["指導力・統率","支持","会員資格","仲間意識"], a:"指導力・統率", x:"The club needs strong leadership.", xj:"その部には強い統率力が必要だ。", e:"leader＋ship（性質・立場を表す接尾辞）。membership と同じ作り。"},
-{u:"ハイレベル", d:2, q:"ownership", p:"名", c:["所有権","会員資格","労働力","責任放棄"], a:"所有権", x:"Car ownership has declined among young people.", xj:"若者の車の所有率は下がっている。", e:"owner＋ship。take ownership of A（Aに責任をもつ）。"},
-{u:"ハイレベル", d:1, q:"majority", p:"名", c:["大多数","少数派","平均","合計"], a:"大多数", x:"The majority of students agreed with the plan.", xj:"生徒の大多数がその計画に賛成した。", e:"反意語は minority。図表問題で頻出。"},
-{u:"ハイレベル", d:1, q:"priority", p:"名", c:["優先すべきこと","特権","前例","例外"], a:"優先すべきこと", x:"Safety is our top priority.", xj:"安全が最優先事項です。", e:"形容詞 prior（前の）。give priority to A（Aを優先する）。"},
-{u:"ハイレベル", d:1, q:"procedure", p:"名", c:["手順","製品","進歩","調達"], a:"手順", x:"Follow the safety procedures carefully.", xj:"安全手順をよく守ってください。", e:"動詞 proceed（進む）。process（過程）と使い分ける。"},
-{u:"ハイレベル", d:2, q:"framework", p:"名", c:["枠組み","建築資材","作業台","下書き"], a:"枠組み", x:"The report provides a framework for discussion.", xj:"その報告書は議論の枠組みを与えている。", e:"frame（枠）＋work。抽象的な「考え方の土台」に使う。"},
-{u:"ハイレベル", d:1, q:"conclusion", p:"名", c:["結論","導入","仮定","例外"], a:"結論", x:"What conclusion can we draw from this data?", xj:"このデータからどんな結論が導けるか。", e:"draw / reach a conclusion。動詞は conclude。"},
-{u:"ハイレベル", d:1, q:"explanation", p:"名", c:["説明","調査","例外","主張"], a:"説明", x:"There is no simple explanation for this result.", xj:"この結果に単純な説明はつかない。", e:"動詞 explain。「言い訳」の意味で使われることもある。"},
-{u:"ハイレベル", d:2, q:"comparison", p:"名", c:["比較","競争","構成","補償"], a:"比較", x:"In comparison with last year, sales rose.", xj:"昨年と比べて売上は伸びた。", e:"in comparison with A。動詞 compare、形容詞 comparative。"},
-{u:"ハイレベル", d:1, q:"combination", p:"名", c:["組み合わせ","分離","衝突","競争"], a:"組み合わせ", x:"The dish is a combination of sweet and sour.", xj:"その料理は甘さと酸っぱさの組み合わせだ。", e:"a combination of A and B。動詞は combine。"},
-{u:"ハイレベル", d:1, q:"interval", p:"名", c:["間隔","内部","干渉","参入"], a:"間隔", x:"Take a short break at regular intervals.", xj:"一定の間隔で短い休憩をとりなさい。", e:"at intervals of ～（～の間隔で）。実験の説明文で出る。"},
-{u:"ハイレベル", d:2, q:"orientation", p:"名", c:["方向づけ・説明会","起源","装飾","組織"], a:"方向づけ・説明会", x:"New students must attend the orientation.", xj:"新入生は説明会に出席しなければならない。", e:"「向き・志向」の意味もある。動詞 orient。"},
-{u:"ハイレベル", d:2, q:"questionnaire", p:"名", c:["アンケート用紙","質問者","試験問題","調査員"], a:"アンケート用紙", x:"Please fill in the questionnaire before leaving.", xj:"帰る前にアンケートに記入してください。", e:"つづりに注意（-naire）。survey とセットで出る。"},
-{u:"ハイレベル", d:2, q:"philosophy", p:"名", c:["哲学・信条","心理学","慈善","物理学"], a:"哲学・信条", x:"Her teaching philosophy is simple.", xj:"彼女の教育理念は単純だ。", e:"「（人の）信条・考え方」の意味でも使う。"},
-{u:"ハイレベル", d:2, q:"etiquette", p:"名", c:["礼儀作法","貼り紙","切符","習慣的な誤り"], a:"礼儀作法", x:"Table etiquette differs from country to country.", xj:"食事の作法は国によって違う。", e:"フランス語由来。異文化を扱う長文で出る。"},
-{u:"ハイレベル", d:1, q:"observe", p:"動", c:["観察する・守る","無視する","予測する","操作する"], a:"観察する・守る", x:"Scientists observed the birds for six months.", xj:"科学者たちは6か月その鳥を観察した。", e:"「（規則を）守る」の意味も。名詞 observation。"},
-{u:"ハイレベル", d:1, q:"investigate", p:"動", c:["調査する","発明する","招待する","投資する"], a:"調査する", x:"They are investigating the cause of the fire.", xj:"彼らは火事の原因を調査している。", e:"名詞は investigation。invent / invest と混同しない。"},
-{u:"ハイレベル", d:1, q:"monitor", p:"動・名", c:["監視する・画面","修理する・工具","記録する・記録係","計測する・目盛り"], a:"監視する・画面", x:"The team monitored the temperature every hour.", xj:"チームは1時間ごとに気温を監視した。", e:"「継続的に見守る」。observe より「変化を追う」感じ。"},
-{u:"ハイレベル", d:1, q:"enable", p:"動", c:["可能にする","禁じる","強制する","延期する"], a:"可能にする", x:"The app enables users to study offline.", xj:"そのアプリは利用者がオフラインで学べるようにする。", e:"enable 人 to do。反意語は disable。"},
-{u:"ハイレベル", d:1, q:"interact", p:"動", c:["交流する・作用し合う","孤立する","干渉を避ける","模倣する"], a:"交流する・作用し合う", x:"Students interact with classmates from other countries.", xj:"生徒は他国の級友と交流する。", e:"interact with A。名詞 interaction、形容詞 interactive。"},
-{u:"ハイレベル", d:2, q:"overcome", p:"動", c:["克服する","見落とす","過大評価する","覆い隠す"], a:"克服する", x:"She overcame her fear of speaking in public.", xj:"彼女は人前で話す恐怖を克服した。", e:"活用は overcome-overcame-overcome。"},
-{u:"ハイレベル", d:1, q:"recover", p:"動", c:["回復する・取り戻す","悪化する","隠す","覆う"], a:"回復する・取り戻す", x:"It took him a month to recover from the injury.", xj:"けがから回復するのに1か月かかった。", e:"recover from A。名詞は recovery。"},
-{u:"ハイレベル", d:1, q:"memorize", p:"動", c:["暗記する","思い出す","記念する","忘れる"], a:"暗記する", x:"Do not just memorize words; use them.", xj:"単語をただ暗記するのではなく、使いなさい。", e:"remember（思い出す・覚えている）とは別。名詞 memorization。"},
-{u:"ハイレベル", d:1, q:"summarize", p:"動", c:["要約する","詳述する","引用する","翻訳する"], a:"要約する", x:"Summarize the article in fifty words.", xj:"その記事を50語で要約しなさい。", e:"名詞は summary。設問の指示文でも出る。"},
-{u:"ハイレベル", d:1, q:"define", p:"動", c:["定義する","否定する","延期する","分割する"], a:"定義する", x:"How do you define success?", xj:"あなたは成功をどう定義しますか。", e:"名詞は definition。形容詞 definite（明確な）。"},
-{u:"ハイレベル", d:1, q:"capture", p:"動", c:["捕らえる・とらえる","解放する","見逃す","誇張する"], a:"捕らえる・とらえる", x:"The photo captures the atmosphere of the festival.", xj:"その写真は祭りの雰囲気をとらえている。", e:"「（心を）つかむ」「（データを）記録する」にも使う。"},
-{u:"ハイレベル", d:1, q:"innovative", p:"形", c:["革新的な","伝統的な","保守的な","模倣的な"], a:"革新的な", x:"The company is known for its innovative designs.", xj:"その会社は革新的なデザインで知られている。", e:"名詞は innovation。動詞 innovate。"},
-{u:"ハイレベル", d:1, q:"intense", p:"形", c:["激しい・強烈な","穏やかな","わずかな","規則的な"], a:"激しい・強烈な", x:"The training was intense but rewarding.", xj:"その訓練は厳しかったが得るものがあった。", e:"副詞 intensely、名詞 intensity。intensive は「集中的な」。"},
-{u:"ハイレベル", d:1, q:"mature", p:"形・動", c:["成熟した・成熟する","未熟な・退化する","自然の・育つ","巨大な・拡大する"], a:"成熟した・成熟する", x:"These birds mature in about two years.", xj:"これらの鳥はおよそ2年で成熟する。", e:"反意語は immature。名詞は maturity。"},
-{u:"ハイレベル", d:2, q:"elderly", p:"形", c:["高齢の","幼い","年上の親族の","古びた"], a:"高齢の", x:"The service is free for elderly people.", xj:"そのサービスは高齢者には無料だ。", e:"old より丁寧な言い方。the elderly で「高齢者たち」。"},
-{u:"ハイレベル", d:1, q:"religious", p:"形", c:["宗教の","地域の","規則的な","伝説的な"], a:"宗教の", x:"The festival has religious origins.", xj:"その祭りには宗教的な起源がある。", e:"名詞は religion。文化を扱う長文で出る。"},
-{u:"ハイレベル", d:2, q:"repetitive", p:"形", c:["繰り返しの","独創的な","断続的な","代表的な"], a:"繰り返しの", x:"The work is simple but repetitive.", xj:"その仕事は単純だが繰り返しが多い。", e:"動詞 repeat、名詞 repetition。"},
-{u:"ハイレベル", d:2, q:"stubborn", p:"形", c:["頑固な","従順な","臆病な","気前のよい"], a:"頑固な", x:"He is too stubborn to change his mind.", xj:"彼は頑固すぎて考えを変えない。", e:"「（汚れなどが）落ちにくい」の意味でも使う。"},
-{u:"ハイレベル", d:2, q:"contextual", p:"形", c:["文脈上の","内容の","接触による","継続的な"], a:"文脈上の", x:"Use contextual clues to guess the meaning.", xj:"文脈の手がかりを使って意味を推測しなさい。", e:"名詞は context（文脈・状況）。語彙推測の設問で出る。"},
-{u:"ハイレベル", d:2, q:"dynamic", p:"形", c:["活発な・変化に富む","静的な","平坦な","規則的な"], a:"活発な・変化に富む", x:"The city has a dynamic music scene.", xj:"その街には活気のある音楽シーンがある。", e:"反意語は static。名詞では「力学・原動力」。"},
-{u:"ハイレベル", d:1, q:"lifelong", p:"形", c:["生涯にわたる","一時的な","毎日の","晩年の"], a:"生涯にわたる", x:"Reading can be a lifelong hobby.", xj:"読書は生涯の趣味になりうる。", e:"lifelong learning（生涯学習）は教育の文章で頻出。"},
-{u:"ハイレベル", d:1, q:"unexpected", p:"形", c:["予期しない","当然の","計画通りの","定期的な"], a:"予期しない", x:"The trip had an unexpected ending.", xj:"その旅行は思いがけない結末を迎えた。", e:"un-＋expected。副詞 unexpectedly。"},
-{u:"ハイレベル", d:1, q:"maintenance", p:"名", c:["維持・整備","主要部分","製造","管理職"], a:"維持・整備", x:"The machine requires regular maintenance.", xj:"その機械は定期的な整備を必要とする。", e:"動詞は maintain。つづりが変わる点に注意。"},
-{u:"ハイレベル", d:1, q:"relatively", p:"副", c:["比較的","絶対的に","めったに～ない","即座に"], a:"比較的", x:"The test was relatively easy this year.", xj:"今年のテストは比較的やさしかった。", e:"形容詞 relative（相対的な・親族）。図表の説明で出る。"},
-{u:"ハイレベル", d:2, q:"thoroughly", p:"副", c:["徹底的に","部分的に","おおよそ","一時的に"], a:"徹底的に", x:"Wash your hands thoroughly before cooking.", xj:"料理の前に手を徹底的に洗いなさい。", e:"形容詞 thorough（徹底した）。through（～を通って）と混同しない。"},
-{u:"ハイレベル", d:2, q:"steadily", p:"副", c:["着実に","急激に","不規則に","一時的に"], a:"着実に", x:"The number of users increased steadily.", xj:"利用者数は着実に増えた。", e:"形容詞 steady（安定した）。グラフの動きを説明する定番語。"},
-{u:"ハイレベル", d:2, q:"withstand", p:"動", c:["耐える","屈する","支持する","理解する"], a:"耐える", x:"The material can withstand high temperatures.", xj:"その素材は高温に耐えられる。", e:"with（against の古い意味）＋stand。活用は withstood。"},
-{u:"ハイレベル", d:2, q:"courage", p:"名", c:["勇気","怒り","礼儀","好奇心"], a:"勇気", x:"It takes courage to admit a mistake.", xj:"間違いを認めるには勇気がいる。", e:"形容詞 courageous。encourage（励ます）と同語源。"},
-{u:"ハイレベル", d:2, q:"desire", p:"名・動", c:["欲求・強く望む","絶望・あきらめる","義務・強いる","設計・設計する"], a:"欲求・強く望む", x:"She had a strong desire to travel abroad.", xj:"彼女には海外へ行きたいという強い願望があった。", e:"a desire to do / for A。形容詞 desirable（望ましい）。"},
-{u:"ハイレベル", d:2, q:"decade", p:"名", c:["10年間","10人組","小数","衰退"], a:"10年間", x:"The city has changed a lot in the past decade.", xj:"この10年でその街は大きく変わった。", e:"century（100年）と対で覚える。decay（衰退）とは別語。"},
-{u:"ハイレベル", d:2, q:"statement", p:"名", c:["発言・陳述","状態","駅","立像"], a:"発言・陳述", x:"Which statement best describes the graph?", xj:"どの記述がそのグラフを最もよく表しているか。", e:"設問文で頻出。動詞は state（述べる）。"},
-{u:"ハイレベル", d:2, q:"progress", p:"名", c:["進歩・進捗","過程","行列","禁止"], a:"進歩・進捗", x:"She has made great progress in English.", xj:"彼女は英語で大きく上達した。", e:"数えられない名詞。make progress（進歩する）。process と区別。"},
-{u:"ハイレベル", d:2, q:"criterion", p:"名", c:["判断基準","批評家","危機","中心"], a:"判断基準", x:"Cost was not the only criterion for the decision.", xj:"費用がその判断の唯一の基準だったわけではない。", e:"複数形は criteria。評価基準を述べる文で出る。"},
-{u:"ハイレベル", d:2, q:"relevant", p:"形", c:["関連のある","無関係な","一時的な","代表的な"], a:"関連のある", x:"Include only information that is relevant to your topic.", xj:"自分の話題に関係のある情報だけを入れなさい。", e:"be relevant to A。反意語は irrelevant。"},
-{u:"ハイレベル", d:2, q:"vulnerable", p:"形", c:["傷つきやすい・弱い","頑丈な","柔軟な","攻撃的な"], a:"傷つきやすい・弱い", x:"Young children are vulnerable to infection.", xj:"幼い子どもは感染に弱い。", e:"be vulnerable to A。防災・健康を扱う長文で頻出。"},
-{u:"ハイレベル", d:2, q:"incorporate", p:"動", c:["組み込む","切り離す","置き換える","公表する"], a:"組み込む", x:"They incorporated students' ideas into the final plan.", xj:"彼らは生徒の意見を最終案に取り入れた。", e:"incorporate A into B。integrate とほぼ同義。"},
-{u:"ハイレベル", d:1, q:"genetic", p:"形", c:["遺伝の","一般的な","独創的な","地質の"], a:"遺伝の", x:"Researchers studied the genetic modification of insects.", xj:"研究者たちは昆虫の遺伝子操作を研究した。", e:"名詞は gene（遺伝子）／genetics（遺伝学）。理科系の長文で頻出。"},
-{u:"ハイレベル", d:2, q:"transmit", p:"動", c:["伝える・感染させる","受け取る","遮断する","翻訳する"], a:"伝える・感染させる", x:"Mosquitoes transmit the disease to humans.", xj:"蚊がその病気を人間に感染させる。", e:"名詞は transmission。「（信号を）送信する」でも使う。"},
-{u:"ハイレベル", d:2, q:"maximize", p:"動", c:["最大にする","最小にする","平均化する","固定する"], a:"最大にする", x:"How can we maximize the effect of this method?", xj:"この方法の効果をどうすれば最大にできるか。", e:"反意語は minimize。名詞 maximum（最大）。"},
-{u:"ハイレベル", d:1, q:"advancement", p:"名", c:["進歩・向上","前払い金","広告","優位"], a:"進歩・向上", x:"Recent advancements in technology changed the workplace.", xj:"近年の技術の進歩は職場を変えた。", e:"動詞 advance。progress とほぼ同義だが「一段上がる」感じ。"},
-{u:"ハイレベル", d:1, q:"modification", p:"名", c:["修正・改変","近代化","調整役","確認"], a:"修正・改変", x:"The plan needs a small modification.", xj:"その計画には少し修正が必要だ。", e:"動詞は modify。genetic modification（遺伝子組み換え）。"},
-{u:"ハイレベル", d:2, q:"injustice", p:"名", c:["不公正","不注意","不確実さ","不都合"], a:"不公正", x:"He spoke out against injustice.", xj:"彼は不公正に対して声を上げた。", e:"in-（否定）＋justice（正義）。社会問題の長文で出る。"},
-{u:"ハイレベル", d:1, q:"recreational", p:"形", c:["娯楽の","再生可能な","規則的な","職業上の"], a:"娯楽の", x:"The park offers many recreational activities.", xj:"その公園は多くの娯楽活動を提供している。", e:"名詞は recreation（娯楽）。re-create（再創造）と語源は同じ。"},
-{u:"ハイレベル", d:1, q:"wander", p:"動", c:["さまよう・気がそれる","急ぐ","立ち止まる","近づく"], a:"さまよう・気がそれる", x:"My mind wandered during the lecture.", xj:"講義の間、私の心はさまよっていた。", e:"wonder（不思議に思う）と混同しやすい。つづりと発音が違う。"},
-{u:"ハイレベル", d:2, q:"awkward", p:"形", c:["気まずい・ぎこちない","快適な","率直な","巧みな"], a:"気まずい・ぎこちない", x:"There was an awkward silence.", xj:"気まずい沈黙があった。", e:"「扱いにくい」の意味でも使う。人間関係を描く文章で出る。"},
-{u:"ハイレベル", d:2, q:"murmur", p:"動", c:["つぶやく","叫ぶ","繰り返す","黙り込む"], a:"つぶやく", x:"She murmured something I could not hear.", xj:"彼女は私に聞こえない何かをつぶやいた。", e:"小説風の文章で会話を導くときに出る。whisper に近い。"},
-{u:"ハイレベル", d:2, q:"keep in mind", p:"熟", c:["心に留めておく","思い出せない","気にしない","覚え書きする"], a:"心に留めておく", x:"Keep in mind that the deadline is Friday.", xj:"締め切りが金曜日だということを心に留めておきなさい。", e:"keep in mind that ... / bear in mind とも言う。"},
-{u:"ハイレベル", d:2, q:"take care of", p:"熟", c:["世話をする・処理する","気をつける","持ち去る","引き受けない"], a:"世話をする・処理する", x:"She takes care of her grandmother every weekend.", xj:"彼女は毎週末、祖母の世話をしている。", e:"look after とほぼ同義。「（用事を）片づける」の意味も。"},
-{u:"ハイレベル", d:2, q:"get along with", p:"熟", c:["～とうまくやっていく","～に追いつく","～を持ち歩く","～から抜け出す"], a:"～とうまくやっていく", x:"He gets along well with his classmates.", xj:"彼は級友とうまくやっている。", e:"人間関係を表す定番表現。get along with A。"},
-{u:"ハイレベル", d:2, q:"in advance", p:"熟", c:["前もって","あとで","その場で","偶然に"], a:"前もって", x:"Please book your seat in advance.", xj:"座席は前もってご予約ください。", e:"beforehand と同義。案内文・申込文で頻出。"},
-{u:"ハイレベル", d:2, q:"by chance", p:"熟", c:["偶然に","意図的に","順番に","徐々に"], a:"偶然に", x:"I met my old teacher by chance at the station.", xj:"私は駅で偶然、昔の先生に会った。", e:"反対は on purpose（わざと）。by accident とも言う。"},
-{u:"ハイレベル", d:1, q:"alternative", p:"名・形", c:["代わりの案・代わりの","追加の案・追加の","最終案・最終の","伝統・伝統的な"], a:"代わりの案・代わりの", x:"Cycling is a good alternative to driving.", xj:"自転車は車の運転に代わるよい選択肢だ。", e:"an alternative to A（to を使う）。副詞 alternatively（あるいは）。"},
-{u:"ハイレベル", d:1, q:"associate", p:"動", c:["結びつけて考える","切り離す","比較する","分類する"], a:"結びつけて考える", x:"People associate the color red with danger.", xj:"人は赤色を危険と結びつけて考える。", e:"associate A with B。名詞 association（協会・連想）。"},
-{u:"ハイレベル", d:2, q:"civilization", p:"名", c:["文明","市民権","公民館","民間人"], a:"文明", x:"Ancient civilizations built large cities.", xj:"古代文明は大きな都市を築いた。", e:"culture（文化）より大きな単位。歴史を扱う長文で出る。"},
-{u:"ハイレベル", d:2, q:"conclude", p:"動", c:["結論を出す・締めくくる","始める","含める","延期する"], a:"結論を出す・締めくくる", x:"The researchers concluded that sleep matters.", xj:"研究者たちは睡眠が重要だと結論づけた。", e:"conclude that ...。名詞は conclusion（結論）。"},
-{u:"ハイレベル", d:1, q:"consume", p:"動", c:["消費する","生産する","保存する","分配する"], a:"消費する", x:"This device consumes very little power.", xj:"この機器は電力をほとんど消費しない。", e:"名詞 consumer（消費者）／consumption（消費）。produce の反対。"},
-{u:"ハイレベル", d:2, q:"ecosystem", p:"名", c:["生態系","経済圏","電子機器一式","気候帯"], a:"生態系", x:"Plastic waste damages the ocean ecosystem.", xj:"プラスチックごみは海の生態系を損なう。", e:"eco（生態）＋system。環境の長文で必出。"},
-{u:"ハイレベル", d:1, q:"emission", p:"名", c:["排出・排出量","受信","放棄","許可"], a:"排出・排出量", x:"The city aims to cut carbon emissions.", xj:"その市は炭素排出量を減らすことを目指している。", e:"動詞は emit（放出する）。温暖化の文章で頻出。"},
-{u:"ハイレベル", d:2, q:"evolution", p:"名", c:["進化・発展","革命","回転","評価"], a:"進化・発展", x:"The book explains the evolution of language.", xj:"その本は言語の進化を説明している。", e:"動詞 evolve。revolution（革命）とつづりが似るので注意。"},
-{u:"ハイレベル", d:1, q:"exploration", p:"名", c:["探査・探検","爆発","展示","説明"], a:"探査・探検", x:"Space exploration has advanced rapidly.", xj:"宇宙探査は急速に進歩した。", e:"動詞 explore。explosion（爆発）と取り違えやすい。"},
-{u:"ハイレベル", d:1, q:"expose", p:"動", c:["さらす・暴く","覆い隠す","輸出する","説明する"], a:"さらす・暴く", x:"Children exposed to English early learn faster.", xj:"早くから英語に触れた子どもは習得が速い。", e:"be exposed to A。名詞は exposure（さらされること）。"},
-{u:"ハイレベル", d:1, q:"facility", p:"名", c:["施設・設備","才能の無さ","工場長","容易さの欠如"], a:"施設・設備", x:"The school has excellent sports facilities.", xj:"その学校にはすぐれた運動施設がある。", e:"ふつう複数形。案内文・図表問題で頻出。"},
-{u:"ハイレベル", d:1, q:"feedback", p:"名", c:["意見・反応","反射音","返品","給餌"], a:"意見・反応", x:"Thank you for your feedback on my draft.", xj:"下書きへのご意見ありがとうございます。", e:"数えられない名詞。give / receive feedback。"},
-{u:"ハイレベル", d:2, q:"greenhouse", p:"名", c:["温室","緑地","農家","植物園"], a:"温室", x:"Greenhouse gases trap heat in the atmosphere.", xj:"温室効果ガスは大気中に熱を閉じ込める。", e:"greenhouse gas / effect（温室効果）で環境の長文に必出。"},
-{u:"ハイレベル", d:1, q:"humanity", p:"名", c:["人類・人間らしさ","謙虚さ","湿度","人道支援金"], a:"人類・人間らしさ", x:"This discovery could benefit all humanity.", xj:"この発見は全人類に恩恵をもたらしうる。", e:"humidity（湿度）とつづりが似るので注意。human＋ity。"},
-{u:"ハイレベル", d:2, q:"institution", p:"名", c:["機関・制度","直感","指示書","建設会社"], a:"機関・制度", x:"Universities are educational institutions.", xj:"大学は教育機関だ。", e:"intuition（直感）と混同しやすい。形容詞 institutional。"},
-{u:"ハイレベル", d:2, q:"meaningful", p:"形", c:["意味のある・有意義な","無意味な","平均的な","けちな"], a:"意味のある・有意義な", x:"She wants a meaningful job.", xj:"彼女は有意義な仕事を望んでいる。", e:"meaning＋ful。反意語は meaningless。"},
-{u:"ハイレベル", d:2, q:"pollution", p:"名", c:["汚染","人口","投票","流行"], a:"汚染", x:"Air pollution is worse in big cities.", xj:"大気汚染は大都市のほうがひどい。", e:"動詞は pollute。population（人口）と取り違えやすい。"},
-{u:"ハイレベル", d:2, q:"revision", p:"名", c:["修正・見直し","再訪問","視界","復讐"], a:"修正・見直し", x:"The essay needs one more revision.", xj:"その小論文にはもう一度の推敲が必要だ。", e:"動詞は revise。イギリス英語では「試験勉強」の意味でも使う。"},
-{u:"ハイレベル", d:1, q:"threaten", p:"動", c:["脅かす","守る","治療する","扱う"], a:"脅かす", x:"Rising seas threaten coastal towns.", xj:"海面上昇は沿岸の町を脅かしている。", e:"名詞は threat。treat（扱う）とつづりが似るので注意。"},
-{u:"ハイレベル", d:1, q:"tourism", p:"名", c:["観光業","旅程表","移住","案内所"], a:"観光業", x:"Tourism is important to the local economy.", xj:"観光業は地域経済にとって重要だ。", e:"tourist（観光客）と使い分ける。地域振興の長文で頻出。"},
-{u:"ハイレベル", d:2, q:"worldwide", p:"形・副", c:["世界的な・世界中で","地域限定の・局所的に","屋外の・屋外で","時代遅れの・かつて"], a:"世界的な・世界中で", x:"The campaign spread worldwide in a week.", xj:"その運動は1週間で世界中に広まった。", e:"形容詞にも副詞にもなる。global とほぼ同義。"},
-];
-
-</script>
-<script>
 /* ============================================================
    phrases.js  --  熟語・句動詞の練習データ（2026-11 追加）
 
@@ -13596,7 +13036,9 @@ var MENSETSU = {
   /* 共通テストの単語（kyotsu.js。英単語トレーニングアプリの words.js の写し）。単語タブだけで使う。
      レベルは混ぜない（英単語アプリと同じ）。kyotsu.js の u（基礎/標準/ハイレベル）→ 下の名前 */
   var KGRADES = ['共通テスト 基礎', '共通テスト 標準', '共通テスト ハイレベル'];
-  var WGRADES = GRADES.concat(KGRADES);   /* 単語タブに並べる順 */
+  /* 単語タブに並べる級。共通テストの単語は目次の「共通テスト単語」にあるので、ここには出さない
+     （2026-11-17 本人の指示。kyotsu.js も読み込まない＝KYOTSU_WORDS が無いので buildKyotsuBank は空で終わる） */
+  var WGRADES = GRADES.slice();
 
   /* 級ごとの説明（ホームのカードに出す） */
   var GRADE_NOTE = {
@@ -14123,6 +13565,11 @@ var MENSETSU = {
      --------------------------------------------------------- */
   function renderHome() {
     stopTimer();
+    if (loggedIn()) {
+      $('who').textContent = cfg.number + '番 ' + cfg.name;
+      $('who').classList.remove('hidden');
+      $('btn-logout').classList.remove('hidden');
+    }
     renderTodayStrip($('today-strip'));
     renderStartList();
     renderWordList();
@@ -14961,6 +14408,8 @@ var MENSETSU = {
     $('review-container').innerHTML = h.join('');
 
     showScreen('screen-result');
+    /* 出席番号・氏名が保存してあれば、解き終わった時点で自動で送る（失敗したら「結果を送信する」で送り直せる） */
+    if (canAutoSend()) doSubmit(true);
   }
 
   /* ---------------------------------------------------------
@@ -15096,6 +14545,8 @@ var MENSETSU = {
 
     $('send-pw').value = '';
     $('send-class').value = (cfg && cfg.className) || '';
+    if (cfg && cfg.number) $('send-number').value = cfg.number;
+    if (cfg && cfg.name) $('send-name').value = cfg.name;
     $('submit-error').classList.add('hidden');
 
     if (!gasUrl() && !hasScriptRun()) {
@@ -15117,31 +14568,47 @@ var MENSETSU = {
     el.classList.remove('hidden');
   }
 
-  function doSubmit() {
-    var pw     = $('send-pw').value;
-    var klass  = $('send-class').value.trim();
-    var number = $('send-number').value.trim();
-    var name   = $('send-name').value.trim();
+  /** 解き終わったときに自動で送れるか（設定済み＋出席番号・氏名がこの端末に保存されている） */
+  function canAutoSend() {
+    return !!(canSend() && cfg.number && cfg.name && (gasUrl() || hasScriptRun()));
+  }
 
-    $('submit-error').classList.add('hidden');
+  /* 送信状況を結果画面に出す（自動送信用） */
+  function sendState(kind, text) {
+    var st = $('send-state');
+    st.className = 'send-state ' + (kind === 'ng' ? 'send-ng' : 'send-ok');
+    st.textContent = text;
+    st.classList.remove('hidden');
+  }
 
-    if (!pw)     { submitError('送信用パスワードを入力してください。'); return; }
-    if (!number) { submitError('出席番号を入力してください。'); return; }
-    if (!/^[0-9]{1,3}$/.test(number)) { submitError('出席番号は半角数字で入力してください（例：12）。'); return; }
-    if (!name)   { submitError('氏名を入力してください。'); return; }
+  /**
+   * auto=true … 解き終わったときの自動送信。画面は出さず、保存してある出席番号・氏名で送る
+   *            （パスワードは「はじめての設定」で確かめ済みなので、ここでは聞かない）
+   * auto=false … 「結果を送信する」から手で送る（パスワードを確かめる）
+   */
+  function doSubmit(auto) {
+    var pw     = auto ? '' : $('send-pw').value;
+    var klass  = auto ? (cfg.className || '') : $('send-class').value.trim();
+    var number = auto ? String(cfg.number || '') : $('send-number').value.trim();
+    var name   = auto ? String(cfg.name || '') : $('send-name').value.trim();
 
-    hashPw(pw, cfg.salt).then(function (h) {
+    if (!auto) {
+      $('submit-error').classList.add('hidden');
+      if (!pw)     { submitError('送信用パスワードを入力してください。'); return; }
+      if (!number) { submitError('出席番号を入力してください。'); return; }
+      if (!/^[0-9]{1,3}$/.test(number)) { submitError('出席番号は半角数字で入力してください（例：12）。'); return; }
+      if (!name)   { submitError('氏名を入力してください。'); return; }
+    }
+
+    var r = lastResult;
+    (auto ? Promise.resolve(cfg.pwHash) : hashPw(pw, cfg.salt)).then(function (h) {
       if (h !== cfg.pwHash) {
         submitError('パスワードが違います。');
         return;
       }
 
-      if (klass && klass !== cfg.className) {
-        cfg.className = klass;
-        saveCfg(cfg);
-      }
+      /* 出席番号・氏名はログインで決まるので、ここでは変えない */
 
-      var r = lastResult;
       var payload = {
         submissionId: r.submissionId,
         appVersion:   APP_VERSION,
@@ -15164,28 +14631,38 @@ var MENSETSU = {
         durationSec:  Math.round((r.finishedAt - r.startedAt) / 1000)
       };
 
-      $('submit-form').classList.add('hidden');
-      $('submit-progress').classList.remove('hidden');
+      if (auto) {
+        sendState('ok', '⏳ 結果を先生に送っています…');
+        $('btn-send').disabled = true;
+      } else {
+        $('submit-form').classList.add('hidden');
+        $('submit-progress').classList.remove('hidden');
+      }
 
       sendToSheet(payload).then(function () {
-        $('submit-progress').classList.add('hidden');
-        $('submit-done').classList.remove('hidden');
-        $('submit-done-msg').innerHTML =
-          '<span class="ok-msg" style="display:block">✅ 送信が完了しました。<br>' +
-          esc(klass) + '　' + esc(number) + '番　' + esc(name) + '　さんの結果を記録しました。</span>';
-
-        var st = $('send-state');
-        st.className = 'send-state send-ok';
-        st.textContent = '✅ 送信済み（' + nowStamp() + '）';
-        st.classList.remove('hidden');
+        if (!auto) {
+          $('submit-progress').classList.add('hidden');
+          $('submit-done').classList.remove('hidden');
+          $('submit-done-msg').innerHTML =
+            '<span class="ok-msg" style="display:block">✅ 送信が完了しました。<br>' +
+            esc(klass) + '　' + esc(number) + '番　' + esc(name) + '　さんの結果を記録しました。</span>';
+        }
+        if (lastResult !== r) return;   // 送っている間に次の問題を始めていたら、画面はそのまま
+        sendState('ok', '✅ ' + (auto ? '自動で' : '') + '送信しました（' + number + '番 ' + name + '・' + nowStamp() + '）');
         $('btn-send').disabled = true;
         $('btn-send').textContent = '送信済み';
 
       }, function (err) {
-        $('submit-progress').classList.add('hidden');
-        $('submit-form').classList.remove('hidden');
-        submitError('送信できませんでした：' + err.message +
-          '　通信環境と、⚙設定の送信先URLをご確認ください。');
+        if (!auto) {
+          $('submit-progress').classList.add('hidden');
+          $('submit-form').classList.remove('hidden');
+          submitError('送信できませんでした：' + err.message +
+            '　通信環境と、⚙設定の送信先URLをご確認ください。');
+          return;
+        }
+        if (lastResult !== r) return;
+        sendState('ng', '⚠ 自動で送れませんでした（' + err.message + '）。電波のよいところで「結果を送信する」を押してください。');
+        $('btn-send').disabled = false;
       });
     });
   }
@@ -15194,7 +14671,7 @@ var MENSETSU = {
      設定モーダル
      --------------------------------------------------------- */
   function openSettings() {
-    if (!cfg) { showScreen('screen-setup'); return; }
+    if (!loggedIn()) { showLogin(); return; }
     $('cfg-url').value = gasUrl();
     if (hasScriptRun()) {
       $('cfg-url').placeholder = 'このページから自動で送信されます（入力不要）';
@@ -15228,6 +14705,7 @@ var MENSETSU = {
       cfg.gasUrl = url;
       cfg.className = klass;
       saveCfg(cfg);
+      shareSetup();
       cfgMsg('保存しました。', 'ok');
       return;
     }
@@ -15245,6 +14723,9 @@ var MENSETSU = {
         cfg.salt = salt;
         cfg.pwHash = nh;
         saveCfg(cfg);
+        /* ログイン用の登録（この端末の利用者一覧）のパスワードも変える */
+        var accs = loadAccounts(), id = currentUser();
+        if (id && accs[id]) { accs[id].salt = salt; accs[id].pwHash = nh; saveAccounts(accs); }
         shareSetup();   // 英文法・共通テスト単語のパスワードも同じにする
         $('cfg-pw-old').value = $('cfg-pw-new1').value = $('cfg-pw-new2').value = '';
         cfgMsg('保存しました。パスワードを変更しました。', 'ok');
@@ -15272,36 +14753,249 @@ var MENSETSU = {
   }
 
   /* ---------------------------------------------------------
-     初期設定画面
+     ログイン（2026-11-17）
+     ・この端末の利用者一覧 em_accounts_v1 に「クラス｜番号｜氏名」ごとのパスワード（salt＋ハッシュ）を持つ。
+       照合はこの端末の中だけ。この端末で初めての人は、確認のパスワードを入れて新しく登録する。
+     ・ログイン中の人は em_current_v1。ログアウトするまで保持する。
+     ・学習記録（英検・英文法・共通テスト単語）は、ログアウトのときにその人の箱（em_u_…）へしまい、
+       ログインのときにその人の箱から出す。アプリ本体は今までどおり e1q_record_v1 などを読むだけ。
+     ・ログインの仕組みを入れる前の記録は、この端末で最初にログインした人のものとして引き継ぐ。
      --------------------------------------------------------- */
-  function doSetup() {
-    var p1 = $('setup-pw1').value;
-    var p2 = $('setup-pw2').value;
+  var ACC_KEY = 'em_accounts_v1', CUR_KEY = 'em_current_v1';
+  var USER_DATA_KEYS = ['e1q_record_v1', 'g4q_record_v1', 'v4q_record_v1'];
+  function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+  function lsSet(k, v) { try { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) {} }
+  function loadAccounts() { try { return JSON.parse(lsGet(ACC_KEY) || '{}') || {}; } catch (e) { return {}; } }
+  function saveAccounts(a) { lsSet(ACC_KEY, JSON.stringify(a)); }
+  function currentUser() { return lsGet(CUR_KEY); }
+  function loggedIn() { return !!(cfg && cfg.pwHash && currentUser()); }
+  function accId(klass, no, name) { return klass.replace(/\s+/g, '') + '|' + no + '|' + name.replace(/\s+/g, ''); }
+  function slotKey(id, k) { return 'em_u_' + id + '_' + k; }
+  function stashUser(id) { USER_DATA_KEYS.forEach(function (k) { lsSet(slotKey(id, k), lsGet(k)); }); }
+  function unstashUser(id) { USER_DATA_KEYS.forEach(function (k) { lsSet(k, lsGet(slotKey(id, k))); }); }
+
+  /* ログイン・ログアウトのあと：記録を読み直し、開いてあった英文法・共通テスト単語は閉じて読み直させる */
+  function afterAccountChange() {
+    record = loadRecord();
+    cfg = loadCfg();
+    ['bunpo', 'kyotsu'].forEach(function (n) {
+      var fr = $(n + '-frame');
+      fr.removeAttribute('data-loaded');
+      fr.removeAttribute('srcdoc');
+    });
+    showApp('eiken');
+  }
+
+  function setupError(msg) {
     var err = $('setup-error');
-    err.classList.add('hidden');
+    err.className = 'error-msg';
+    err.textContent = msg;
+    err.classList.remove('hidden');
+  }
 
-    if (p1.length < 4) { err.textContent = 'パスワードは4文字以上にしてください。'; err.classList.remove('hidden'); return; }
-    if (p1 !== p2)     { err.textContent = 'パスワードが一致しません。'; err.classList.remove('hidden'); return; }
+  function doSetup() {
+    $('setup-error').classList.add('hidden');
+    var klass = $('setup-class').value.trim();
+    var sNo = $('setup-number').value.trim(), sName = $('setup-name').value.trim().replace(/\s+/g, ' ');
+    var p1 = $('setup-pw1').value, p2 = $('setup-pw2').value;
+    var isNew = !$('setup-pw2-field').classList.contains('hidden');
 
-    var salt = makeId();
-    hashPw(p1, salt).then(function (h) {
+    if (!/^[0-9]{1,3}$/.test(sNo)) { setupError('出席番号を半角数字で入力してください（例：12）。'); return; }
+    if (!sName) { setupError('氏名を入力してください。'); return; }
+    if (p1.length < 4) { setupError('パスワードは4文字以上で入力してください。'); return; }
+
+    var accs = loadAccounts();
+    var id = accId(klass, sNo, sName);
+    var acc = accs[id];
+    var first = !Object.keys(accs).length;                 // この端末で最初のログイン（今までの記録を引き継ぐ）
+    var legacy = (first && cfg && cfg.pwHash) ? cfg : null; // ログインの仕組みの前に決めたパスワード
+
+    function finish(a, inherit) {
+      if (!inherit) unstashUser(id);          // その人の記録を出す（初めての人は空から）
+      lsSet(CUR_KEY, id);
       saveCfg({
-        version:   APP_VERSION,
-        salt:      salt,
-        pwHash:    h,
-        gasUrl:    $('setup-url').value.trim() || DEFAULT_GAS_URL,
-        className: $('setup-class').value.trim(),
-        createdAt: new Date().toISOString()
+        version: APP_VERSION, salt: a.salt, pwHash: a.pwHash,
+        gasUrl: $('setup-url').value.trim() || DEFAULT_GAS_URL,
+        className: a.className, number: a.number, name: a.name,
+        createdAt: a.createdAt || new Date().toISOString()
       });
-      shareSetup();   // 1回の設定で、英文法・共通テスト単語もそのまま使えるようにする
+      shareSetup();   // 1回のログインで、英文法・共通テスト単語もそのまま使える
+      $('setup-pw1').value = $('setup-pw2').value = '';
+      $('setup-pw2-field').classList.add('hidden');
+      afterAccountChange();
       renderHome();
+    }
+    function register(salt, hash) {
+      var a = { className: klass, number: sNo, name: sName, salt: salt, pwHash: hash,
+                createdAt: new Date().toISOString() };
+      accs[id] = a;
+      saveAccounts(accs);
+      finish(a, first);
+    }
+
+    if (acc) {
+      hashPw(p1, acc.salt).then(function (h) {
+        if (h !== acc.pwHash) { setupError('パスワードが違います。'); return; }
+        finish(acc, false);
+      });
+      return;
+    }
+    if (legacy) {
+      /* 前に決めていたパスワードなら、確認なしでそのまま登録する */
+      hashPw(p1, legacy.salt).then(function (h) {
+        if (h === legacy.pwHash) { register(legacy.salt, legacy.pwHash); return; }
+        newUser();
+      });
+      return;
+    }
+    newUser();
+
+    function newUser() {
+      if (!isNew) {
+        $('setup-pw2-field').classList.remove('hidden');
+        $('setup-pw2').focus();
+        setupError('この端末では初めてのようです。クラス・番号・氏名が合っているか確かめて、' +
+                   '確認のためパスワードをもう一度入れてください。');
+        return;
+      }
+      if (p1 !== p2) { setupError('パスワードが一致しません。'); return; }
+      var salt = makeId();
+      hashPw(p1, salt).then(function (h) { register(salt, h); });
+    }
+  }
+
+  /* 名前や番号を書き換えたら、確認欄はいったん閉じる（別の人として登録しないように） */
+  function resetNewUserField() {
+    $('setup-pw2-field').classList.add('hidden');
+    $('setup-pw2').value = '';
+  }
+
+  /* ---------------------------------------------------------
+     パスワードの再設定（2026-11-17）
+     「パスワードを忘れた」→ 依頼を英語マスターの「パスワード再設定」シートへ送る（コードはGASが作り、ここには返らない）
+     → 先生が本人に4けたのコードを伝える → コードをGASで確かめ、合っていれば新しいパスワードを決め直す。
+     記録はそのまま。依頼中であることは em_reset_pending_v1 に覚え、アプリを閉じても続きから入れられる。
+     --------------------------------------------------------- */
+  var RESET_KEY = 'em_reset_pending_v1';
+  function loadReset() { try { return JSON.parse(lsGet(RESET_KEY) || 'null'); } catch (e) { return null; } }
+
+  function forgotPw() {
+    $('setup-error').classList.add('hidden');
+    var klass = $('setup-class').value.trim();
+    var sNo = $('setup-number').value.trim(), sName = $('setup-name').value.trim().replace(/\s+/g, ' ');
+    if (!/^[0-9]{1,3}$/.test(sNo) || !sName) {
+      setupError('先に、クラス・出席番号・氏名を入れてから「パスワードを忘れた」を押してください。');
+      return;
+    }
+    var id = accId(klass, sNo, sName);
+    if (!loadAccounts()[id]) {
+      setupError('この端末には、そのクラス・番号・氏名の登録がありません。入力を確かめてください' +
+                 '（この端末で初めてなら、パスワードを決めてそのまま新しく登録できます）。');
+      return;
+    }
+    if (!gasUrl() && !hasScriptRun()) { setupError('送信先が設定されていないため、依頼を送れません。先生に相談してください。'); return; }
+    var rid = makeId();
+    var b = $('btn-forgot');
+    b.disabled = true;
+    b.textContent = '先生に依頼を送っています…';
+    sendToSheet({ submissionId: rid, action: 'resetRequest', appVersion: APP_VERSION,
+                  className: klass, number: sNo, name: sName }).then(function () {
+      lsSet(RESET_KEY, JSON.stringify({ id: id, requestId: rid, className: klass, number: sNo, name: sName, at: Date.now() }));
+      showResetPanel();
+    }, function (err) {
+      setupError('依頼を送れませんでした（' + err.message + '）。電波のよいところで、もう一度押してください。');
+    }).then(function () {
+      b.disabled = false;
+      b.textContent = 'パスワードを忘れた';
     });
   }
 
-  /* 設定せずに始めた端末。送信ボタンは出ないが、練習と記録はそのまま使える */
-  function skipSetup() {
-    saveCfg({ version: APP_VERSION, skipped: true, createdAt: new Date().toISOString() });
-    renderHome();
+  function showResetPanel() {
+    var p = loadReset();
+    $('reset-panel').classList.toggle('hidden', !p);
+    $('reset-error').classList.add('hidden');
+    if (!p) return;
+    $('setup-class').value = p.className;
+    $('setup-number').value = p.number;
+    $('setup-name').value = p.name;
+    $('reset-msg').innerHTML = '<strong>' + esc(p.number) + '番 ' + esc(p.name) + '</strong> さんのパスワード再設定を、' +
+      '先生に依頼しました（' + fmtDate(p.at) + '）。<br>先生から4けたの<strong>再設定コード</strong>をもらって、下に入れてください。';
+  }
+
+  function resetError(msg) {
+    var el = $('reset-error');
+    el.textContent = msg;
+    el.classList.remove('hidden');
+  }
+
+  function doReset() {
+    var p = loadReset();
+    if (!p) { showResetPanel(); return; }
+    $('reset-error').classList.add('hidden');
+    var code = $('reset-code').value.trim(), pw1 = $('reset-pw1').value, pw2 = $('reset-pw2').value;
+    if (!/^[0-9]{4}$/.test(code)) { resetError('再設定コード（4けたの数字）を入れてください。'); return; }
+    if (pw1.length < 4) { resetError('新しいパスワードは4文字以上にしてください。'); return; }
+    if (pw1 !== pw2) { resetError('新しいパスワードが一致しません。'); return; }
+    var b = $('btn-reset-do');
+    b.disabled = true;
+    jsonp(gasUrl() + '?resetVerify=' + encodeURIComponent(p.requestId) + '&code=' + code, 20000).then(function (res) {
+      /* verified が無い返事（古いGASの「接続OK」など）では決め直させない */
+      if (!res || !res.ok || res.verified !== true) {
+        resetError((res && res.error) || 'コードを確かめられませんでした（先生のGASが新しくなっていないかもしれません）。');
+        return;
+      }
+      var accs = loadAccounts(), a = accs[p.id];
+      if (!a) { resetError('この端末の登録が見つかりません。'); return; }
+      var salt = makeId();
+      return hashPw(pw1, salt).then(function (h) {
+        a.salt = salt;
+        a.pwHash = h;
+        saveAccounts(accs);
+        lsSet(RESET_KEY, null);
+        $('reset-code').value = $('reset-pw1').value = $('reset-pw2').value = '';
+        $('reset-panel').classList.add('hidden');
+        var ok = $('setup-error');
+        ok.className = 'ok-msg';
+        ok.textContent = '✅ パスワードを決め直しました。新しいパスワードでログインしてください。';
+        $('setup-pw1').focus();
+      });
+    }, function (err) {
+      resetError('コードを確かめられませんでした（' + err.message + '）。電波のよいところで、もう一度押してください。');
+    }).then(function () { b.disabled = false; });
+  }
+
+  function cancelReset() {
+    lsSet(RESET_KEY, null);
+    showResetPanel();
+  }
+
+  function logout() {
+    var id = currentUser();
+    if (id) stashUser(id);                    // その人の記録をしまう
+    USER_DATA_KEYS.forEach(function (k) { lsSet(k, null); });
+    lsSet(STORAGE_KEY, null);
+    lsSet('g4q_setup_v1', null);
+    lsSet('v4q_setup_v1', null);
+    lsSet(CUR_KEY, null);
+    closeSettings();
+    afterAccountChange();
+    showLogin();
+  }
+
+  function showLogin() {
+    $('setup-class').value = '';
+    $('setup-number').value = '';
+    $('setup-name').value = '';
+    $('setup-pw1').value = '';
+    resetNewUserField();
+    $('setup-error').classList.add('hidden');
+    $('who').classList.add('hidden');
+    $('btn-logout').classList.add('hidden');
+    showScreen('screen-setup');
+    $('setup-url').value = DEFAULT_GAS_URL;
+    /* 送信先は埋め込み済みなので、ログイン画面では見せない（変えるときは⚙設定から） */
+    if (hasScriptRun() || DEFAULT_GAS_URL) $('setup-url-field').classList.add('hidden');
+    showResetPanel();   // 再設定の依頼中なら、コードを入れる欄を出す
   }
 
   /* ---------------------------------------------------------
@@ -15347,15 +15041,17 @@ var MENSETSU = {
   var SUB_SETUP_KEY = { bunpo: 'g4q_setup_v1', kyotsu: 'v4q_setup_v1' };
   function shareSetup() {
     if (!cfg || !cfg.pwHash) return false;
+    /* 出席番号・氏名も写す（あると各アプリが解き終わったときに自動で送信する） */
     var c = { version: '1.0', salt: cfg.salt, pwHash: cfg.pwHash, gasUrl: gasUrl(),
-              className: cfg.className || '', createdAt: cfg.createdAt || new Date().toISOString(),
-              sharedFrom: 'eiken' };
+              className: cfg.className || '', number: cfg.number || '', name: cfg.name || '',
+              createdAt: cfg.createdAt || new Date().toISOString(), sharedFrom: 'eiken' };
     ['bunpo', 'kyotsu'].forEach(function (n) {
       var cur = null;
       try { cur = JSON.parse(localStorage.getItem(SUB_SETUP_KEY[n]) || 'null'); } catch (e) { cur = null; }
       /* 同じ設定なら何もしない（目次を切り替えるたびに読み直すと、解いている途中の問題が消えるため） */
       if (cur && cur.pwHash === c.pwHash && cur.salt === c.salt && cur.gasUrl === c.gasUrl &&
-          (cur.className || '') === c.className) return;
+          (cur.className || '') === c.className && (cur.number || '') === c.number &&
+          (cur.name || '') === c.name) return;
       try { localStorage.setItem(SUB_SETUP_KEY[n], JSON.stringify(c)); } catch (e) { return; }
       /* 設定が変わったときだけ、開いてあるアプリを次に開いたとき新しい設定で読み直す */
       var fr = $(n + '-frame');
@@ -15370,13 +15066,11 @@ var MENSETSU = {
   function showApp(name) {
     var msg = $('sub-app-msg');
     msg.classList.add('hidden');
-    if (name !== 'eiken' && !shareSetup()) {
-      /* 英検の「はじめての設定」がまだ（または「設定せずに練習だけ」）の端末 */
-      msg.innerHTML = '英文法対策・共通テスト単語は、<strong>はじめての設定</strong>（パスワードの登録）を済ませると使えます。' +
-        '1回の設定で、英検・英文法・共通テスト単語の3つすべてに使えます。<br>' +
-        '<button id="btn-goto-setup" class="primary-btn" style="margin-top:10px">はじめての設定をする</button>';
+    if (name !== 'eiken' && (!loggedIn() || !shareSetup())) {
+      /* まだログインしていない */
+      msg.innerHTML = '英文法対策・共通テスト単語は、<strong>ログイン</strong>すると使えます。' +
+        '1回のログインで、英検・英文法・共通テスト単語の3つすべてに使えます。';
       msg.classList.remove('hidden');
-      $('btn-goto-setup').onclick = function () { msg.classList.add('hidden'); showScreen('screen-setup'); };
       name = 'eiken';
     }
     if (name !== 'eiken') {
@@ -15422,7 +15116,13 @@ var MENSETSU = {
 
     /* ---- 送信まわり ---- */
     $('btn-setup-save').onclick = doSetup;
-    $('btn-setup-skip').onclick = skipSetup;
+    $('btn-logout').onclick = logout;
+    $('btn-forgot').onclick = forgotPw;
+    $('btn-reset-do').onclick = doReset;
+    $('btn-reset-cancel').onclick = cancelReset;
+    ['setup-class', 'setup-number', 'setup-name'].forEach(function (id) {
+      $(id).addEventListener('input', resetNewUserField);
+    });
 
     $('btn-settings').onclick = openSettings;
     $('btn-cfg-close').onclick = closeSettings;
@@ -15435,21 +15135,18 @@ var MENSETSU = {
         var b = $('btn-cfg-reset');
         if (!armed) {
           armed = true;
-          b.textContent = 'もう一度押すと初期化します';
-          timer = setTimeout(function () { armed = false; b.textContent = 'この端末の設定を初期化する'; }, 6000);
+          b.textContent = 'もう一度押すとログアウトします';
+          timer = setTimeout(function () { armed = false; b.textContent = 'ログアウトする'; }, 6000);
           return;
         }
         clearTimeout(timer);
-        try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
-        cfg = null;
-        b.textContent = 'この端末の設定を初期化する';
-        closeSettings();
-        showScreen('screen-setup');
+        b.textContent = 'ログアウトする';
+        logout();
       };
     })();
 
     $('btn-send').onclick = openSubmit;
-    $('btn-submit-do').onclick = doSubmit;
+    $('btn-submit-do').onclick = function () { doSubmit(false); };
     $('btn-submit-cancel').onclick = closeSubmit;
     $('btn-submit-close').onclick = closeSubmit;
     bindTopNav();
@@ -15457,14 +15154,16 @@ var MENSETSU = {
     // （日本語入力の変換中に書き換えると文字が重複するので、確定してから直す）
     function fixNumber(e) {
       if (e.isComposing) return;
-      var el = $('send-number');
+      var el = e.target;
       var v = el.value.replace(/[０-９]/g, function (c) { return String.fromCharCode(c.charCodeAt(0) - 0xFEE0); })
-                      .replace(/[^0-9]/g, '').slice(0, 3);
+                      .replace(/[^0-9]/g, '').slice(0, el.maxLength > 0 ? el.maxLength : 3);
       if (v !== el.value) el.value = v;
     }
-    $('send-number').addEventListener('input', fixNumber);
-    $('send-number').addEventListener('compositionend', fixNumber);
-    $('send-number').addEventListener('blur', fixNumber);
+    ['send-number', 'setup-number', 'reset-code'].forEach(function (id) {
+      $(id).addEventListener('input', fixNumber);
+      $(id).addEventListener('compositionend', fixNumber);
+      $(id).addEventListener('blur', fixNumber);
+    });
 
     $('btn-copy').onclick = function () {
       var who = { className: $('send-class').value.trim(),
@@ -15535,18 +15234,9 @@ var MENSETSU = {
     $('btn-rec-start').onclick = recStart;
     $('btn-rec-stop').onclick = recStop;
 
-    /* 初期設定が済んでいない端末は、まず設定画面を出す */
-    if (!cfg) {
-      showScreen('screen-setup');
-      $('setup-url').value = DEFAULT_GAS_URL;
-      /* GASから配信しているときは送信先を探す必要がないので、URL欄を隠す。
-         生徒に「URLって何？」と聞かれないようにするための表示上の措置。 */
-      if (hasScriptRun()) {
-        $('setup-url-field').classList.add('hidden');
-        $('setup-url-auto').classList.remove('hidden');
-      }
-      return;
-    }
+    /* ログインしていなければ、まずログイン画面を出す
+       （GASから配信しているときは送信先URLの欄を隠す＝showLogin の中） */
+    if (!loggedIn()) { showLogin(); return; }
     renderHome();
   }
 
